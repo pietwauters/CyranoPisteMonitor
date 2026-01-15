@@ -239,6 +239,9 @@
       font-weight: bold;
       font-size: 3vmin;
       color: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     /* Scores */
@@ -475,10 +478,6 @@
     }
 
     function updateDisplay(data) {
-      // Debug: log all data fields
-      console.log('Received data:', data);
-      console.log('All keys:', Object.keys(data));
-
       // Update names and scores (corrected mapping)
       elements.leftName.textContent = data.LeftName || "";
       elements.rightName.textContent = data.RightName || "";
@@ -496,7 +495,6 @@
       updateCard(elements.cards.rYellow, data.LYcard);
 
       // Update P-Cards (corrected mapping)
-      console.log('P-Card values - RP-card:', data['RP-card'], 'LP-card:', data['LP-card']);
       updatePCard(elements.cards.lPCard, data['RP-card']);
       updatePCard(elements.cards.rPCard, data['LP-card']);
 
@@ -531,22 +529,18 @@
 
     function updatePCard(element, value) {
       // 0 = no display, 1 = yellow, 2 = red, other = no display
-      console.log('updatePCard called - element:', element, 'value:', value, 'type:', typeof value);
       element.style.visibility = "hidden";
       element.classList.remove('smYellow', 'smRed');
+      element.textContent = "P"; // Ensure P text is always present
 
       const numValue = parseInt(value);
 
       if (numValue === 1) {
-        console.log('Showing YELLOW P-card');
         element.classList.add('smYellow');
         element.style.visibility = "visible";
       } else if (numValue === 2) {
-        console.log('Showing RED P-card');
         element.classList.add('smRed');
         element.style.visibility = "visible";
-      } else {
-        console.log('P-card hidden (value:', value, ')');
       }
     }
 
