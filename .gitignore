@@ -4,6 +4,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Systemd service (generated dynamically)
+mqtt-web.service
+
 # Environment variables
 .env
 .env.local

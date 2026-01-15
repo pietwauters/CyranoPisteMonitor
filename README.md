@@ -40,6 +40,29 @@ node server.js
 5. Open your browser:
    - Main Display: http://localhost:3000
    - Admin Panel: http://localhost:3000/admin
+   - Piste Management: http://localhost:3000/piste-mgt
+
+## Auto-Start at Boot (Raspberry Pi / Linux)
+
+To configure the server to start automatically when your system boots:
+
+```bash
+./StartAtBoot.sh
+```
+
+This script will:
+- Automatically detect your username and installation directory
+- Create and install a systemd service
+- Enable it to start at boot
+- Start the service immediately
+
+To disable auto-start:
+
+```bash
+./DontStartAtBoot.sh
+```
+
+**Note:** You need to run `chmod +x StartAtBoot.sh DontStartAtBoot.sh` first if the scripts aren't executable.
 
 ## Configuration
 
