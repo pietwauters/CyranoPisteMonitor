@@ -225,6 +225,22 @@
       /* Yellow + 1 card width + 0.5 card gap */
     }
 
+    .lPCard {
+      right: calc(50% + 30vmin);
+      /* Red + 1 card width + 0.5 card gap */
+    }
+
+    .rPCard {
+      left: calc(50% + 30vmin);
+      /* Red + 1 card width + 0.5 card gap */
+    }
+
+    .smPCard {
+      font-weight: bold;
+      font-size: 3vmin;
+      color: #000;
+    }
+
     /* Scores */
     .score-container {
       position: absolute;
@@ -342,10 +358,12 @@
       </div>
 
       <div class="card-container">
+        <div class="lPCard smCard smPCard">P</div>
         <div class="lRed smCard smRed"></div>
         <div class="lYellow smCard smYellow"></div>
         <div class="rYellow smCard smYellow"></div>
         <div class="rRed smCard smRed"></div>
+        <div class="rPCard smCard smPCard">P</div>
       </div>
 
       <div class="score-container">
@@ -401,7 +419,9 @@
         lRed: document.querySelector('.lRed'),
         lYellow: document.querySelector('.lYellow'),
         rRed: document.querySelector('.rRed'),
-        rYellow: document.querySelector('.rYellow')
+        rYellow: document.querySelector('.rYellow'),
+        lPCard: document.querySelector('.lPCard'),
+        rPCard: document.querySelector('.rPCard')
       },
       lights: {
         lColor: document.querySelector('.lColor'),
@@ -471,6 +491,10 @@
       updateCard(elements.cards.rRed, data.LRcard);
       updateCard(elements.cards.rYellow, data.LYcard);
 
+      // Update P-Cards (corrected mapping)
+      updatePCard(elements.cards.lPCard, data.RPcard);
+      updatePCard(elements.cards.rPCard, data.LPcard);
+
       // Update lights (corrected mapping)
       updateLight(elements.lights.lColor, data.RLight);
       updateLight(elements.lights.rColor, data.LLight);
@@ -498,6 +522,20 @@
     function updateCard(element, value) {
       element.textContent = value > 0 ? value : "";
       element.style.visibility = value > 0 ? "visible" : "hidden";
+    }
+
+    function updatePCard(element, value) {
+      // 0 = no display, 1 = yellow, 2 = red, other = no display
+      element.style.visibility = "hidden";
+      element.classList.remove('smYellow', 'smRed');
+
+      if (value === 1) {
+        element.classList.add('smYellow');
+        element.style.visibility = "visible";
+      } else if (value === 2) {
+        element.classList.add('smRed');
+        element.style.visibility = "visible";
+      }
     }
 
     function updateLight(element, state) {
