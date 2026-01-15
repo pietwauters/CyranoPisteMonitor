@@ -379,7 +379,7 @@
   <script src="js/mqttws31.min.js"></script>
   <script>
     let currentPiste = "";
-    const client = new Paho.MQTT.Client(location.hostname, 9001, "fencingDisplay");
+    const client = new Paho.MQTT.Client(location.hostname, 9001, "fencingDisplay_" + Date.now());
 
     // Initialize piste selector
     window.onload = function () {
