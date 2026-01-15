@@ -376,7 +376,7 @@
     </div>
   </div>
 
-  <script src="js/mqttws31.min.js"></script>
+  <script src="/js/mqttws31.min.js"></script>
   <script>
     let currentPiste = "";
     const client = new Paho.MQTT.Client(location.hostname, 9001, "fencingDisplay_" + Date.now());
@@ -670,7 +670,7 @@
     // Update the updateFlag function to:
     function updateFlag(flagElement, nocCode) {
       if (nocCode && nocCode.length === 3) {
-        const newSrc = `flags/${nocCode.toUpperCase()}.png`;
+        const newSrc = `/flags/${nocCode.toUpperCase()}.png`;
         // Force reload by checking if src changed
         if (flagElement.src !== newSrc) {
           flagElement.src = newSrc;
