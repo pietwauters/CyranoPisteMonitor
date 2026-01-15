@@ -381,15 +381,51 @@
     let currentPiste = "";
     const client = new Paho.MQTT.Client(location.hostname, 9001, "fencingDisplay_" + Date.now());
 
+    // Check if loaded via direct piste URL
+    function getPisteFromURL() {
+      const path = window.location.pathname;
+      const match = path.match(/\/piste\/(\d{3})/);
+      return match ? match[1] : null;
+    }
+
     // Initialize piste selector
     window.onload = function () {
       const pisteSelect = document.getElementById('piste-select');
+      const urlPiste = getPisteFromURL();
+
+      // Populate selector options
       for (let i = 1; i <= 999; i++) {
         const option = document.createElement('option');
         option.value = i.toString().padStart(3, '0');
         option.text = `Piste ${option.value}`;
         pisteSelect.appendChild(option);
       }
+
+      // If loaded via direct URL, hide controls and auto-subscribe
+      if (urlPiste) {
+        pisteSelect.style.display = 'none';
+        document.getElementById('fullscreen-btn').style.top = '2vmin';
+        document.getElementById('fullscreen-btn').style.left = '2vmin';
+
+        // Auto-subscribe to the piste
+        currentPiste = urlPiste;
+        pisteSelect.value = urlPiste;
+        client.connect({
+          onSuccess: () => {
+            console.log("Connected to MQTT broker");
+            client.subscribe(`MQTT_Cyrano/Piste_${currentPiste}/#`);
+            document.querySelector('.poolNum').textContent = `Strip_${currentPiste}`;
+          },
+          onFailure: (err) => console.error("Connection failed:", err)
+        });
+      } else {
+        // Normal mode - connect but wait for user to select piste
+        client.connect({
+          onSuccess: () => console.log("Connected to MQTT broker"),
+          onFailure: (err) => console.error("Connection failed:", err)
+        });
+      }
+
       handleResize();
     };
 
@@ -435,11 +471,6 @@
       leftFlag: document.querySelector('.right-flag'),
       rightFlag: document.querySelector('.left-flag')
     };
-
-    client.connect({
-      onSuccess: () => console.log("Connected to MQTT broker"),
-      onFailure: (err) => console.error("Connection failed:", err)
-    });
 
     client.onMessageArrived = (message) => {
       if (message.destinationName.includes("/FromDevice")) {

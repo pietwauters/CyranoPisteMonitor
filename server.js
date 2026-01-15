@@ -16,6 +16,11 @@ app.get('/piste-mgt', (req, res) => {
   res.sendFile(__dirname + '/public/piste-mgt.html');
 });
 
+// Direct piste display route
+app.get('/piste/:number', (req, res) => {
+  res.sendFile(__dirname + '/public/index.html');
+});
+
 // MQTT Client Configuration
 const mqttBroker = 'mqtt://localhost:1883';
 const client = mqtt.connect(mqttBroker);
