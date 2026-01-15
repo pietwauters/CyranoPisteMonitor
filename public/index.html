@@ -492,6 +492,7 @@
       updateCard(elements.cards.rYellow, data.LYcard);
 
       // Update P-Cards (corrected mapping)
+      console.log('P-Card values - RPcard:', data.RPcard, 'LPcard:', data.LPcard);
       updatePCard(elements.cards.lPCard, data.RPcard);
       updatePCard(elements.cards.rPCard, data.LPcard);
 
@@ -526,15 +527,20 @@
 
     function updatePCard(element, value) {
       // 0 = no display, 1 = yellow, 2 = red, other = no display
+      console.log('updatePCard called - element:', element, 'value:', value, 'type:', typeof value);
       element.style.visibility = "hidden";
       element.classList.remove('smYellow', 'smRed');
 
       if (value === 1) {
+        console.log('Showing YELLOW P-card');
         element.classList.add('smYellow');
         element.style.visibility = "visible";
       } else if (value === 2) {
+        console.log('Showing RED P-card');
         element.classList.add('smRed');
         element.style.visibility = "visible";
+      } else {
+        console.log('P-card hidden (value:', value, ')');
       }
     }
 
