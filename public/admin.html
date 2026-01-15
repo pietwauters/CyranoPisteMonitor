@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Administrator Panel</title>
+    <style>
+        body {
+            background: #1a1a1a;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #4CAF50;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #64B5F6;
+            margin-top: 30px;
+        }
+
+        .section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #333;
+            border-radius: 5px;
+        }
+
+        .form-group {
+            margin: 15px 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #bbb;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            background: #444;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        button.secondary {
+            background: #64B5F6;
+        }
+
+        button.secondary:hover {
+            background: #42A5F5;
+        }
+
+        button.danger {
+            background: #f44336;
+        }
+
+        button.danger:hover {
+            background: #da190b;
+        }
+
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .status.success {
+            background: #4CAF50;
+            display: block;
+        }
+
+        .status.error {
+            background: #f44336;
+            display: block;
+        }
+
+        .connection-status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+
+        .connection-status.connected {
+            background: #4CAF50;
+        }
+
+        .connection-status.disconnected {
+            background: #f44336;
+        }
+
+        .nav-link {
+            display: inline-block;
+            margin: 10px 0;
+            color: #64B5F6;
+            text-decoration: none;
+        }
+
+        .nav-link:hover {
+            text-decoration: underline;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #444;
+        }
+
+        th {
+            background: #3a3a3a;
+            color: #4CAF50;
+        }
+
+        tr:hover {
+            background: #3a3a3a;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="admin-container">
+        <h1>
+            Administrator Panel
+            <span id="mqtt-status" class="connection-status disconnected">Disconnected</span>
+        </h1>
+
+        <a href="/" class="nav-link">← Back to Display</a>
+
+        <div class="section">
+            <h2>MQTT Configuration</h2>
+            <div class="form-group">
+                <label for="mqtt-broker">MQTT Broker URL:</label>
+                <input type="text" id="mqtt-broker" placeholder="mqtt://localhost:1883" value="mqtt://localhost:1883">
+            </div>
+            <div class="form-group">
+                <label for="mqtt-topic">Default Topic:</label>
+                <input type="text" id="mqtt-topic" placeholder="fencing/scores">
+            </div>
+            <button onclick="reconnectMQTT()">Reconnect</button>
+            <button class="secondary" onclick="testConnection()">Test Connection</button>
+        </div>
+
+        <div class="section">
+            <h2>Publish Test Message</h2>
+            <div class="form-group">
+                <label for="publish-topic">Topic:</label>
+                <input type="text" id="publish-topic" placeholder="test/topic">
+            </div>
+            <div class="form-group">
+                <label for="publish-message">Message (JSON):</label>
+                <textarea id="publish-message" rows="4" placeholder='{"key": "value"}'></textarea>
+            </div>
+            <button onclick="publishMessage()">Publish Message</button>
+        </div>
+
+        <div class="section">
+            <h2>Active Subscriptions</h2>
+            <table id="subscriptions-table">
+                <thead>
+                    <tr>
+                        <th>Topic</th>
+                        <th>Messages Received</th>
+                        <th>Last Message</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="subscriptions-body">
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: #888;">No active subscriptions</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="form-group">
+                <label for="new-topic">Subscribe to Topic:</label>
+                <input type="text" id="new-topic" placeholder="topic/name">
+            </div>
+            <button onclick="subscribeTopic()">Subscribe</button>
+        </div>
+
+        <div class="section">
+            <h2>System Actions</h2>
+            <button class="secondary" onclick="clearData()">Clear Display Data</button>
+            <button class="danger" onclick="resetSystem()">Reset System</button>
+        </div>
+
+        <div id="status-message" class="status"></div>
+    </div>
+
+    <script src="/js/mqttws31.min.js"></script>
+    <script>
+        let client;
+        const subscriptions = new Map();
+
+        // Connect to MQTT
+        function connectMQTT(brokerUrl = 'ws://localhost:9001') {
+            if (client && client.connected) {
+                client.end();
+            }
+
+            try {
+                client = mqtt.connect(brokerUrl);
+
+                client.on('connect', () => {
+                    console.log('Connected to MQTT broker');
+                    updateStatus('connected');
+                    showMessage('Connected to MQTT broker', 'success');
+                });
+
+                client.on('error', (error) => {
+                    console.error('MQTT Error:', error);
+                    updateStatus('disconnected');
+                    showMessage('Connection error: ' + error.message, 'error');
+                });
+
+                client.on('message', (topic, message) => {
+                    handleMessage(topic, message.toString());
+                });
+
+            } catch (error) {
+                console.error('Connection error:', error);
+                updateStatus('disconnected');
+                showMessage('Failed to connect: ' + error.message, 'error');
+            }
+        }
+
+        function handleMessage(topic, message) {
+            if (subscriptions.has(topic)) {
+                const sub = subscriptions.get(topic);
+                sub.count++;
+                sub.lastMessage = message.substring(0, 50) + (message.length > 50 ? '...' : '');
+                sub.lastTime = new Date();
+                updateSubscriptionsTable();
+            }
+        }
+
+        function updateStatus(status) {
+            const statusEl = document.getElementById('mqtt-status');
+            statusEl.textContent = status === 'connected' ? 'Connected' : 'Disconnected';
+            statusEl.className = 'connection-status ' + status;
+        }
+
+        function showMessage(message, type) {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status ' + type;
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function reconnectMQTT() {
+            const brokerUrl = document.getElementById('mqtt-broker').value;
+            connectMQTT(brokerUrl);
+        }
+
+        function testConnection() {
+            if (client && client.connected) {
+                showMessage('MQTT is connected and working!', 'success');
+            } else {
+                showMessage('MQTT is not connected', 'error');
+            }
+        }
+
+        function publishMessage() {
+            const topic = document.getElementById('publish-topic').value;
+            const message = document.getElementById('publish-message').value;
+
+            if (!topic) {
+                showMessage('Please enter a topic', 'error');
+                return;
+            }
+
+            if (!client || !client.connected) {
+                showMessage('Not connected to MQTT broker', 'error');
+                return;
+            }
+
+            try {
+                client.publish(topic, message);
+                showMessage('Message published to ' + topic, 'success');
+            } catch (error) {
+                showMessage('Failed to publish: ' + error.message, 'error');
+            }
+        }
+
+        function subscribeTopic() {
+            const topic = document.getElementById('new-topic').value;
+
+            if (!topic) {
+                showMessage('Please enter a topic', 'error');
+                return;
+            }
+
+            if (!client || !client.connected) {
+                showMessage('Not connected to MQTT broker', 'error');
+                return;
+            }
+
+            client.subscribe(topic, (err) => {
+                if (err) {
+                    showMessage('Failed to subscribe: ' + err.message, 'error');
+                } else {
+                    subscriptions.set(topic, { count: 0, lastMessage: 'None', lastTime: null });
+                    updateSubscriptionsTable();
+                    showMessage('Subscribed to ' + topic, 'success');
+                    document.getElementById('new-topic').value = '';
+                }
+            });
+        }
+
+        function unsubscribeTopic(topic) {
+            if (client && client.connected) {
+                client.unsubscribe(topic);
+                subscriptions.delete(topic);
+                updateSubscriptionsTable();
+                showMessage('Unsubscribed from ' + topic, 'success');
+            }
+        }
+
+        function updateSubscriptionsTable() {
+            const tbody = document.getElementById('subscriptions-body');
+
+            if (subscriptions.size === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #888;">No active subscriptions</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            subscriptions.forEach((sub, topic) => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+          <td>${topic}</td>
+          <td>${sub.count}</td>
+          <td>${sub.lastMessage}</td>
+          <td><button class="danger" onclick="unsubscribeTopic('${topic}')">Unsubscribe</button></td>
+        `;
+            });
+        }
+
+        function clearData() {
+            if (confirm('Are you sure you want to clear all display data?')) {
+                // You can implement this to send a clear command via MQTT
+                showMessage('Clear command would be sent here', 'success');
+            }
+        }
+
+        function resetSystem() {
+            if (confirm('Are you sure you want to reset the system? This action cannot be undone.')) {
+                // You can implement system reset logic here
+                showMessage('Reset command would be sent here', 'success');
+            }
+        }
+
+        // Initialize connection on page load
+        window.addEventListener('load', () => {
+            connectMQTT();
+        });
+    </script>
+</body>
+
+</html>

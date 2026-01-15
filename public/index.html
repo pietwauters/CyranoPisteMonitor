@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Fencing Score Display</title>
+  <style>
+    
+    /* Fullscreen styles */
+    /* Fullscreen overrides */
+    :fullscreen {
+      background: #000 !important;
+    }
+
+    :fullscreen .scoring-container {
+      width: 100vw !important;
+      height: 100vh !important;
+      min-width: unset !important;
+      min-height: unset !important;
+      max-width: unset !important;
+      max-height: unset !important;
+      padding: 0 !important;
+      border-radius: 0 !important;
+    }
+
+    :fullscreen #fullscreen-btn,
+    :fullscreen #piste-select {
+      display: none;
+    }
+
+    :fullscreen .scoring-container {
+      width: 100vw;
+      height: 100vh;
+      border-radius: 0;
+      padding: 2vmin;
+    }
+
+    html:fullscreen,
+    body:fullscreen {
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Base styles */
+    body {
+      background: #333;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Main container */
+    .scoring-container {
+      background: #000;
+      border-radius: 1.5vmin;
+      position: relative;
+      width: 90vw;
+      height: 90vh;
+      min-width: 800px;
+      min-height: 400px;
+      max-width: 2000px;
+      max-height: 1000px;
+      padding: 2vmin;
+      box-sizing: border-box;
+      aspect-ratio: 16/9;
+    }
+
+    /* Typography */
+    h3 {
+      color: #fff;
+      margin: 0 0 1vh;
+      font-size: 3vmin;
+      text-align: center;
+    }
+
+    h4.poolNum {
+      color: #ff0;
+      margin: 0 0 2vh;
+      font-size: 2.5vmin;
+      text-align: center;
+    }
+
+    /* Scoring machine layout */
+    .scoringMachine {
+      position: relative;
+      height: calc(100% - 8vh);
+    }
+
+    /* Name containers */
+    .name-container {
+      display: flex;
+      justify-content: space-between;
+      height: 10vh;
+      margin-bottom: 2vh;
+    }
+
+    .smName {
+      color: white;
+      font-size: 5vmin;
+      width: 48%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      padding: 0 1.5vmin;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .name-text {
+        flex-grow: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        }
+
+    .lName { background: #900; justify-content: flex-start; }
+    .rName { background: #060; justify-content: flex-end; }
+
+    /* Add flag container styling */
+    .flag-container {
+      display: flex;
+      justify-content: space-between;
+      padding: 0 0.5vmin;
+      margin: 1vmin 0;
+      height: 10vmin;
+    }
+
+    .national-flag {
+      height: 10vmin;
+      width: auto;
+      aspect-ratio: 3/2;
+      object-fit: contain;
+      display: none;
+    }
+
+    /* Lights */
+    .light-container {
+      display: flex;
+      justify-content: space-between;
+      margin: 1vh 0;
+      padding: 0 1px;
+    }
+
+    .smLamp {
+      width: 24vmin;
+      height: 6vmin;
+      transition: all 0.3s ease;
+    }
+
+    /* Timer */
+    .timer-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    .smClock {
+      color: #fff;
+      font-size: 12vmin;
+      margin: 5;
+      text-shadow: 0 0 25px #fff;
+    }
+
+    .smPeriod {
+      color: #fff;
+      font-size: 4vmin;
+      margin-top: 1vh;
+    }
+
+    /* Cards */
+    .card-container {
+      position: absolute;
+      bottom: 4vh;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      gap: 4vmin;
+    }
+
+    .smCard {
+      width: 4vmin;
+      height: 3vmin;
+      border-radius: 0.5vmin;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      visibility: hidden;
+    }
+
+    /* Scores */
+    .score-container {
+      position: absolute;
+      bottom: 2vh;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 4vmin;
+      box-sizing: border-box;
+    }
+
+    .smScore {
+      color: white;
+      font-size: 16vmin;
+      min-width: 25vmin;
+      text-align: center;
+    }
+
+    /* Priority indicators */
+    .left-priority, .right-priority {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 4vmin;
+      display: none;
+    }
+
+    .left-priority {
+      right: calc(100% + 1.5vmin);
+      color: #ff0000;
+    }
+
+    .right-priority {
+      left: calc(100% + 1.5vmin);
+      color: #00ff00;
+    }
+
+    /* Fullscreen button */
+    #fullscreen-btn {
+      position: fixed;
+      top: 2vmin;
+      right: 2vmin;
+      z-index: 1000;
+      padding: 1vmin 2vmin;
+      font-size: 2vmin;
+      background: #444;
+      color: white;
+      border: 1px solid #666;
+      border-radius: 0.5vmin;
+      cursor: pointer;
+    }
+
+    /* Piste selector */
+    #piste-select {
+      position: absolute;
+      top: 2vmin;
+      left: 2vmin;
+      z-index: 100;
+      padding: 0.5vmin 1vmin;
+      font-size: 2vmin;
+    }
+
+    /* Color classes */
+    .smYellow { background: #ff0; }
+    .smRed { background: #f00; }
+    .smGreen { background: #0f0; }
+    .smWhite { background: #fff; }
+  </style>
+</head>
+<body>
+  <button id="fullscreen-btn">Fullscreen</button>
+  <select id="piste-select">
+    <option value="">Select Piste</option>
+  </select>
+
+  <div class="scoring-container">
+    <h4 class="poolNum">Strip Podium</h4>
+    
+    <div id="strip_Podium" class="scoringMachine">
+        <div class="name-container">
+            <div class="lName smName"></div>
+            <div class="rName smName"></div>
+      </div>
+
+      <div class="light-container">
+        <div class="lColor smLamp smRed"></div>
+        <div class="lWhite smLamp smWhite"></div>
+        <div class="rWhite smLamp smWhite"></div>
+        <div class="rColor smLamp smGreen"></div>
+      </div>
+
+      <div class="flag-container">
+        <img class="national-flag left-flag" alt="Left flag">
+        <img class="national-flag right-flag" alt="Right flag">
+        </div>
+
+      <div class="timer-container">
+        <div class="clock smClock">0:00</div>
+        <div class="period smPeriod">1</div>
+        <div class="left-priority"></div>
+        <div class="right-priority"></div>
+      </div>
+
+      <div class="card-container">
+        <div class="lRed smCard smRed"></div>
+        <div class="lYellow smCard smYellow"></div>
+        <div class="rYellow smCard smYellow"></div>
+        <div class="rRed smCard smRed"></div>
+      </div>
+
+      <div class="score-container">
+        <div class="lScore smScore">0</div>
+        <div class="rScore smScore">0</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/mqttws31.min.js"></script> 
+  <script>
+    let currentPiste = "";
+    const client = new Paho.MQTT.Client(location.hostname, 9001, "fencingDisplay");
+    
+    // Initialize piste selector
+    window.onload = function() {
+      const pisteSelect = document.getElementById('piste-select');
+      for(let i = 1; i <= 999; i++) {
+        const option = document.createElement('option');
+        option.value = i.toString().padStart(3, '0');
+        option.text = `Piste ${option.value}`;
+        pisteSelect.appendChild(option);
+      }
+      handleResize();
+    };
+
+    // Piste selection handler
+    document.getElementById('piste-select').addEventListener('change', (e) => {
+      const newPiste = e.target.value;
+      if(newPiste && newPiste !== currentPiste) {
+        if(currentPiste) {
+          client.unsubscribe(`MQTT_Cyrano/Piste_${currentPiste}/#`);
+        }
+        currentPiste = newPiste;
+        client.subscribe(`MQTT_Cyrano/Piste_${currentPiste}/#`);
+        resetDisplay();
+        document.querySelector('.poolNum').textContent = `Strip_${currentPiste}`;
+      }
+    });
+
+    // Element references
+    const elements = {
+      leftName: document.querySelector('.lName'),
+      rightName: document.querySelector('.rName'),
+      leftScore: document.querySelector('.lScore'),
+      rightScore: document.querySelector('.rScore'),
+      clock: document.querySelector('.smClock'),
+      period: document.querySelector('.smPeriod'),
+      leftPriority: document.querySelector('.left-priority'),
+      rightPriority: document.querySelector('.right-priority'),
+      poolNum: document.querySelector('.poolNum'),
+      cards: {
+        lRed: document.querySelector('.lRed'),
+        lYellow: document.querySelector('.lYellow'),
+        rRed: document.querySelector('.rRed'),
+        rYellow: document.querySelector('.rYellow')
+      },
+      lights: {
+        lColor: document.querySelector('.lColor'),
+        rColor: document.querySelector('.rColor'),
+        lWhite: document.querySelector('.lWhite'),
+        rWhite: document.querySelector('.rWhite')
+      },
+      leftFlag: document.querySelector('.right-flag'),
+      rightFlag: document.querySelector('.left-flag')
+    };
+
+    client.connect({
+      onSuccess: () => console.log("Connected to MQTT broker"),
+      onFailure: (err) => console.error("Connection failed:", err)
+    });
+
+    client.onMessageArrived = (message) => {
+      if(message.destinationName.includes("/FromDevice")) {
+        try {
+          const data = JSON.parse(message.payloadString);
+          updateDisplay(data);
+        } catch(e) {
+          console.error("JSON parse error:", e);
+        }
+      }
+    };
+    function resetDisplay() {
+      // Reset all display elements
+      elements.leftName.textContent = "";
+      elements.rightName.textContent = "";
+      elements.leftScore.textContent = "0";
+      elements.rightScore.textContent = "0";
+      elements.clock.textContent = "0:00";
+      elements.period.textContent = "1";
+      elements.leftFlag.style.display = 'none';
+      elements.leftFlag.style.display = 'none';
+      elements.rightFlag.style.display = 'none';
+      elements.leftFlag.src = '';
+      elements.rightFlag.src = '';
+      // Reset cards
+      Object.values(elements.cards).forEach(card => {
+        card.textContent = "";
+        card.style.visibility = "hidden";
+      });
+      
+      // Reset lights
+      Object.values(elements.lights).forEach(light => {
+        light.style.opacity = "0.1";
+        light.style.boxShadow = "none";
+      });
+    }
+
+    function updateDisplay(data) {
+      // Update names and scores (corrected mapping)
+      elements.leftName.textContent = data.RightName || "";
+      elements.rightName.textContent = data.LeftName || "";
+      elements.leftScore.textContent = data.Rscore || "0";
+      elements.rightScore.textContent = data.Lscore || "0";
+
+      // Update timer and period
+      elements.clock.textContent = data.Stopwatch || "0:00";
+      elements.period.textContent = data.Round || "1";
+
+      // Update cards (corrected mapping)
+      updateCard(elements.cards.lRed, data.RRcard);
+      updateCard(elements.cards.lYellow, data.RYcard);
+      updateCard(elements.cards.rRed, data.LRcard);
+      updateCard(elements.cards.rYellow, data.LYcard);
+
+      // Update lights (corrected mapping)
+      updateLight(elements.lights.lColor, data.RLight);
+      updateLight(elements.lights.rColor, data.LLight);
+      updateLight(elements.lights.lWhite, data.RWlight);
+      updateLight(elements.lights.rWhite, data.LWlight);
+      // Update priority indicators
+      const priority = data.Priority || '';
+      elements.leftPriority.style.display = 'none';
+      elements.rightPriority.style.display = 'none';
+      elements.leftPriority.textContent = '';
+      elements.rightPriority.textContent = '';
+
+      if (priority === 'L') {
+        elements.leftPriority.textContent = 'P';
+        elements.leftPriority.style.display = 'block';
+      } else if (priority === 'R') {
+        elements.rightPriority.textContent = 'P';
+        elements.rightPriority.style.display = 'block';
+      }
+      updateFlag(elements.leftFlag, data.LeftNat);
+      updateFlag(elements.rightFlag, data.RightNat);
+    
+    }
+
+    function updateCard(element, value) {
+      element.textContent = value > 0 ? value : "";
+      element.style.visibility = value > 0 ? "visible" : "hidden";
+    }
+
+    function updateLight(element, state) {
+      element.style.opacity = state === "1" ? "1" : "0.1";
+      element.style.boxShadow = state === "1" ? "0 0 15px currentColor" : "none";
+    }
+    // Fullscreen functionality
+    const fullscreenButton = document.getElementById('fullscreen-btn');
+    let isFullscreen = false;
+
+    fullscreenButton.addEventListener('click', toggleFullscreen);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        exitFullscreen();
+      }
+    });
+
+    function toggleFullscreen() {
+      if (!isFullscreen) {
+        enterFullscreen();
+      } else {
+        exitFullscreen();
+      }
+    }
+
+    function enterFullscreen() {
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+      } else if (elem.mozRequestFullScreen) { /* Firefox */
+        elem.mozRequestFullScreen();
+      } else if (elem.webkitRequestFullscreen) { /* Chrome, Safari & Opera */
+        elem.webkitRequestFullscreen();
+      } else if (elem.msRequestFullscreen) { /* IE/Edge */
+        elem.msRequestFullscreen();
+      }
+      isFullscreen = true;
+       // Add resize handler
+      window.addEventListener('resize', handleResize);
+    }
+
+    function exitFullscreen() {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.mozCancelFullScreen) { /* Firefox */
+        document.mozCancelFullScreen();
+      } else if (document.webkitExitFullscreen) { /* Chrome, Safari & Opera */
+        document.webkitExitFullscreen();
+      } else if (document.msExitFullscreen) { /* IE/Edge */
+        document.msExitFullscreen();
+      }
+      isFullscreen = false;
+      // Remove resize handler
+      window.removeEventListener('resize', handleResize);
+    }
+
+    // Resize handler
+    function handleResize() {
+      const container = document.querySelector('.scoring-container');
+      
+      if (document.fullscreenElement) {
+        container.style.width = '100vw';
+        container.style.height = '100vh';
+      } else {
+        const aspectRatio = 16/9;
+        const windowRatio = window.innerWidth / window.innerHeight;
+        
+        if (windowRatio > aspectRatio) {
+          container.style.width = `${90 * aspectRatio * (window.innerHeight / window.innerWidth)}vw`;
+          container.style.height = '90vh';
+        } else {
+          container.style.width = '90vw';
+          container.style.height = `${90 / aspectRatio * (window.innerWidth / window.innerHeight)}vh`;
+        }
+      }
+    }
+    // Update the updateFlag function to:
+    function updateFlag(flagElement, nocCode) {
+        if (nocCode && nocCode.length === 3) {
+            const newSrc = `flags/${nocCode.toUpperCase()}.png`;
+            // Force reload by checking if src changed
+            if (flagElement.src !== newSrc) {
+                flagElement.src = newSrc;
+            }
+            flagElement.style.display = 'block';
+            flagElement.onerror = () => {
+                flagElement.style.display = 'none';
+                flagElement.src = '';
+            };
+        } else {
+            flagElement.style.display = 'none';
+            flagElement.src = '';
+        }
+    }
+    window.addEventListener('resize', handleResize);
+
+    // Rest of the script remains the same as previous version
+    // ... [Keep all existing JavaScript functions from previous answer] ...
+    // (resetDisplay, updateDisplay, updateCard, updateLight, fullscreen functions)
+  </script>
+</body>
+</html>

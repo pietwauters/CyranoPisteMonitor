@@ -1,0 +1,25 @@
+const express = require('express');
+const mqtt = require('mqtt');
+const app = express();
+const port = 3000;
+
+// Serve static files (HTML/CSS/JS)
+app.use(express.static('public'));
+
+// Admin page route
+app.get('/admin', (req, res) => {
+  res.sendFile(__dirname + '/public/admin.html');
+});
+
+// MQTT Client Configuration
+const mqttBroker = 'mqtt://localhost:1883';
+const client = mqtt.connect(mqttBroker);
+
+client.on('connect', () => {
+  console.log('Connected to MQTT broker');
+});
+
+// Start the server
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
+});
