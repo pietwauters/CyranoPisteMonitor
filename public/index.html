@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <title>Fencing Score Display</title>
   <style>
-    
     /* Fullscreen styles */
     /* Fullscreen overrides */
     :fullscreen {
@@ -111,15 +111,23 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .name-text {
-        flex-grow: 1;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        }
 
-    .lName { background: #900; justify-content: flex-start; }
-    .rName { background: #060; justify-content: flex-end; }
+    .name-text {
+      flex-grow: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .lName {
+      background: #900;
+      justify-content: flex-start;
+    }
+
+    .rName {
+      background: #060;
+      justify-content: flex-end;
+    }
 
     /* Add flag container styling */
     .flag-container {
@@ -214,7 +222,8 @@
     }
 
     /* Priority indicators */
-    .left-priority, .right-priority {
+    .left-priority,
+    .right-priority {
       position: absolute;
       top: 50%;
       transform: translateY(-50%);
@@ -258,12 +267,24 @@
     }
 
     /* Color classes */
-    .smYellow { background: #ff0; }
-    .smRed { background: #f00; }
-    .smGreen { background: #0f0; }
-    .smWhite { background: #fff; }
+    .smYellow {
+      background: #ff0;
+    }
+
+    .smRed {
+      background: #f00;
+    }
+
+    .smGreen {
+      background: #0f0;
+    }
+
+    .smWhite {
+      background: #fff;
+    }
   </style>
 </head>
+
 <body>
   <button id="fullscreen-btn">Fullscreen</button>
   <select id="piste-select">
@@ -272,11 +293,11 @@
 
   <div class="scoring-container">
     <h4 class="poolNum">Strip Podium</h4>
-    
+
     <div id="strip_Podium" class="scoringMachine">
-        <div class="name-container">
-            <div class="lName smName"></div>
-            <div class="rName smName"></div>
+      <div class="name-container">
+        <div class="lName smName"></div>
+        <div class="rName smName"></div>
       </div>
 
       <div class="light-container">
@@ -289,7 +310,7 @@
       <div class="flag-container">
         <img class="national-flag left-flag" alt="Left flag">
         <img class="national-flag right-flag" alt="Right flag">
-        </div>
+      </div>
 
       <div class="timer-container">
         <div class="clock smClock">0:00</div>
@@ -312,15 +333,15 @@
     </div>
   </div>
 
-  <script src="js/mqttws31.min.js"></script> 
+  <script src="js/mqttws31.min.js"></script>
   <script>
     let currentPiste = "";
     const client = new Paho.MQTT.Client(location.hostname, 9001, "fencingDisplay");
-    
+
     // Initialize piste selector
-    window.onload = function() {
+    window.onload = function () {
       const pisteSelect = document.getElementById('piste-select');
-      for(let i = 1; i <= 999; i++) {
+      for (let i = 1; i <= 999; i++) {
         const option = document.createElement('option');
         option.value = i.toString().padStart(3, '0');
         option.text = `Piste ${option.value}`;
@@ -332,8 +353,8 @@
     // Piste selection handler
     document.getElementById('piste-select').addEventListener('change', (e) => {
       const newPiste = e.target.value;
-      if(newPiste && newPiste !== currentPiste) {
-        if(currentPiste) {
+      if (newPiste && newPiste !== currentPiste) {
+        if (currentPiste) {
           client.unsubscribe(`MQTT_Cyrano/Piste_${currentPiste}/#`);
         }
         currentPiste = newPiste;
@@ -376,11 +397,11 @@
     });
 
     client.onMessageArrived = (message) => {
-      if(message.destinationName.includes("/FromDevice")) {
+      if (message.destinationName.includes("/FromDevice")) {
         try {
           const data = JSON.parse(message.payloadString);
           updateDisplay(data);
-        } catch(e) {
+        } catch (e) {
           console.error("JSON parse error:", e);
         }
       }
@@ -403,7 +424,7 @@
         card.textContent = "";
         card.style.visibility = "hidden";
       });
-      
+
       // Reset lights
       Object.values(elements.lights).forEach(light => {
         light.style.opacity = "0.1";
@@ -447,9 +468,9 @@
         elements.rightPriority.textContent = 'P';
         elements.rightPriority.style.display = 'block';
       }
-      updateFlag(elements.leftFlag, data.LeftNat);
-      updateFlag(elements.rightFlag, data.RightNat);
-    
+      updateFlag(elements.leftFlag, data.RightNat);
+      updateFlag(elements.rightFlag, data.LeftNat);
+
     }
 
     function updateCard(element, value) {
@@ -492,7 +513,7 @@
         elem.msRequestFullscreen();
       }
       isFullscreen = true;
-       // Add resize handler
+      // Add resize handler
       window.addEventListener('resize', handleResize);
     }
 
@@ -514,14 +535,14 @@
     // Resize handler
     function handleResize() {
       const container = document.querySelector('.scoring-container');
-      
+
       if (document.fullscreenElement) {
         container.style.width = '100vw';
         container.style.height = '100vh';
       } else {
-        const aspectRatio = 16/9;
+        const aspectRatio = 16 / 9;
         const windowRatio = window.innerWidth / window.innerHeight;
-        
+
         if (windowRatio > aspectRatio) {
           container.style.width = `${90 * aspectRatio * (window.innerHeight / window.innerWidth)}vw`;
           container.style.height = '90vh';
@@ -533,21 +554,21 @@
     }
     // Update the updateFlag function to:
     function updateFlag(flagElement, nocCode) {
-        if (nocCode && nocCode.length === 3) {
-            const newSrc = `flags/${nocCode.toUpperCase()}.png`;
-            // Force reload by checking if src changed
-            if (flagElement.src !== newSrc) {
-                flagElement.src = newSrc;
-            }
-            flagElement.style.display = 'block';
-            flagElement.onerror = () => {
-                flagElement.style.display = 'none';
-                flagElement.src = '';
-            };
-        } else {
-            flagElement.style.display = 'none';
-            flagElement.src = '';
+      if (nocCode && nocCode.length === 3) {
+        const newSrc = `flags/${nocCode.toUpperCase()}.png`;
+        // Force reload by checking if src changed
+        if (flagElement.src !== newSrc) {
+          flagElement.src = newSrc;
         }
+        flagElement.style.display = 'block';
+        flagElement.onerror = () => {
+          flagElement.style.display = 'none';
+          flagElement.src = '';
+        };
+      } else {
+        flagElement.style.display = 'none';
+        flagElement.src = '';
+      }
     }
     window.addEventListener('resize', handleResize);
 
@@ -556,4 +577,5 @@
     // (resetDisplay, updateDisplay, updateCard, updateLight, fullscreen functions)
   </script>
 </body>
+
 </html>
