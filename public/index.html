@@ -384,14 +384,30 @@
     // Check if loaded via direct piste URL
     function getPisteFromURL() {
       const path = window.location.pathname;
+      console.log('Current path:', path);
       const match = path.match(/\/piste\/(\d{3})/);
+      console.log('URL match result:', match);
       return match ? match[1] : null;
     }
+
+    // Set up message handler before connecting
+    client.onMessageArrived = (message) => {
+      if (message.destinationName.includes("/FromDevice")) {
+        try {
+          const data = JSON.parse(message.payloadString);
+          updateDisplay(data);
+        } catch (e) {
+          console.error("JSON parse error:", e);
+        }
+      }
+    };
 
     // Initialize piste selector
     window.onload = function () {
       const pisteSelect = document.getElementById('piste-select');
       const urlPiste = getPisteFromURL();
+
+      console.log('URL Piste:', urlPiste);
 
       // Populate selector options
       for (let i = 1; i <= 999; i++) {
@@ -403,6 +419,7 @@
 
       // If loaded via direct URL, hide controls and auto-subscribe
       if (urlPiste) {
+        console.log('Direct piste URL detected:', urlPiste);
         pisteSelect.style.display = 'none';
         document.getElementById('fullscreen-btn').style.top = '2vmin';
         document.getElementById('fullscreen-btn').style.left = '2vmin';
@@ -412,13 +429,14 @@
         pisteSelect.value = urlPiste;
         client.connect({
           onSuccess: () => {
-            console.log("Connected to MQTT broker");
+            console.log("Connected to MQTT broker, subscribing to:", `MQTT_Cyrano/Piste_${currentPiste}/#`);
             client.subscribe(`MQTT_Cyrano/Piste_${currentPiste}/#`);
             document.querySelector('.poolNum').textContent = `Strip_${currentPiste}`;
           },
           onFailure: (err) => console.error("Connection failed:", err)
         });
       } else {
+        console.log('Normal mode - showing selector');
         // Normal mode - connect but wait for user to select piste
         client.connect({
           onSuccess: () => console.log("Connected to MQTT broker"),
