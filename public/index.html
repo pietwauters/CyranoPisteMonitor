@@ -475,6 +475,10 @@
     }
 
     function updateDisplay(data) {
+      // Debug: log all data fields
+      console.log('Received data:', data);
+      console.log('All keys:', Object.keys(data));
+
       // Update names and scores (corrected mapping)
       elements.leftName.textContent = data.LeftName || "";
       elements.rightName.textContent = data.RightName || "";
