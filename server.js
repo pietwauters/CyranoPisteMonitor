@@ -3,9 +3,6 @@ const mqtt = require('mqtt');
 const app = express();
 const port = 3000;
 
-// Serve static files (HTML/CSS/JS)
-app.use(express.static('public'));
-
 // Admin page route
 app.get('/admin', (req, res) => {
   res.sendFile(__dirname + '/public/admin.html');
@@ -20,6 +17,9 @@ app.get('/piste-mgt', (req, res) => {
 app.get('/piste/:number', (req, res) => {
   res.sendFile(__dirname + '/public/index.html');
 });
+
+// Serve static files (HTML/CSS/JS) - must come after specific routes
+app.use(express.static('public'));
 
 // MQTT Client Configuration
 const mqttBroker = 'mqtt://localhost:1883';
