@@ -236,29 +236,38 @@
         let client;
         const subscriptions = new Map();
 
-        // Connect to MQTT
-        function connectMQTT(brokerUrl = 'ws://localhost:9001') {
-            if (client && client.connected) {
-                client.end();
+        // Connect to MQTT using Paho
+        function connectMQTT(hostname = location.hostname, port = 9001) {
+            if (client && client.isConnected()) {
+                client.disconnect();
             }
 
             try {
-                client = mqtt.connect(brokerUrl);
+                client = new Paho.MQTT.Client(hostname, port, "adminPanel_" + Date.now());
 
-                client.on('connect', () => {
-                    console.log('Connected to MQTT broker');
-                    updateStatus('connected');
-                    showMessage('Connected to MQTT broker', 'success');
-                });
+                client.onConnectionLost = (responseObject) => {
+                    if (responseObject.errorCode !== 0) {
+                        console.log("Connection lost: " + responseObject.errorMessage);
+                        updateStatus('disconnected');
+                        showMessage('Connection lost: ' + responseObject.errorMessage, 'error');
+                    }
+                };
 
-                client.on('error', (error) => {
-                    console.error('MQTT Error:', error);
-                    updateStatus('disconnected');
-                    showMessage('Connection error: ' + error.message, 'error');
-                });
+                client.onMessageArrived = (message) => {
+                    handleMessage(message.destinationName, message.payloadString);
+                };
 
-                client.on('message', (topic, message) => {
-                    handleMessage(topic, message.toString());
+                client.connect({
+                    onSuccess: () => {
+                        console.log('Connected to MQTT broker');
+                        updateStatus('connected');
+                        showMessage('Connected to MQTT broker', 'success');
+                    },
+                    onFailure: (err) => {
+                        console.error('Connection failed:', err);
+                        updateStatus('disconnected');
+                        showMessage('Connection failed: ' + err.errorMessage, 'error');
+                    }
                 });
 
             } catch (error) {
@@ -295,11 +304,14 @@
 
         function reconnectMQTT() {
             const brokerUrl = document.getElementById('mqtt-broker').value;
-            connectMQTT(brokerUrl);
+            // Parse hostname and port from URL if needed
+            const hostname = location.hostname;
+            const port = 9001;
+            connectMQTT(hostname, port);
         }
 
         function testConnection() {
-            if (client && client.connected) {
+            if (client && client.isConnected()) {
                 showMessage('MQTT is connected and working!', 'success');
             } else {
                 showMessage('MQTT is not connected', 'error');
@@ -308,20 +320,22 @@
 
         function publishMessage() {
             const topic = document.getElementById('publish-topic').value;
-            const message = document.getElementById('publish-message').value;
+            const messageText = document.getElementById('publish-message').value;
 
             if (!topic) {
                 showMessage('Please enter a topic', 'error');
                 return;
             }
 
-            if (!client || !client.connected) {
+            if (!client || !client.isConnected()) {
                 showMessage('Not connected to MQTT broker', 'error');
                 return;
             }
 
             try {
-                client.publish(topic, message);
+                const message = new Paho.MQTT.Message(messageText);
+                message.destinationName = topic;
+                client.send(message);
                 showMessage('Message published to ' + topic, 'success');
             } catch (error) {
                 showMessage('Failed to publish: ' + error.message, 'error');
@@ -336,29 +350,40 @@
                 return;
             }
 
-            if (!client || !client.connected) {
+            if (!client || !client.isConnected()) {
                 showMessage('Not connected to MQTT broker', 'error');
                 return;
             }
 
-            client.subscribe(topic, (err) => {
-                if (err) {
-                    showMessage('Failed to subscribe: ' + err.message, 'error');
-                } else {
-                    subscriptions.set(topic, { count: 0, lastMessage: 'None', lastTime: null });
-                    updateSubscriptionsTable();
-                    showMessage('Subscribed to ' + topic, 'success');
-                    document.getElementById('new-topic').value = '';
-                }
-            });
+            try {
+                client.subscribe(topic, {
+                    onSuccess: () => {
+                        subscriptions.set(topic, { count: 0, lastMessage: 'None', lastTime: null });
+                        updateSubscriptionsTable();
+                        showMessage('Subscribed to ' + topic, 'success');
+                        document.getElementById('new-topic').value = '';
+                    },
+                    onFailure: (err) => {
+                        showMessage('Failed to subscribe: ' + err.errorMessage, 'error');
+                    }
+                });
+            } catch (error) {
+                showMessage('Failed to subscribe: ' + error.message, 'error');
+            }
         }
 
         function unsubscribeTopic(topic) {
-            if (client && client.connected) {
-                client.unsubscribe(topic);
-                subscriptions.delete(topic);
-                updateSubscriptionsTable();
-                showMessage('Unsubscribed from ' + topic, 'success');
+            if (client && client.isConnected()) {
+                client.unsubscribe(topic, {
+                    onSuccess: () => {
+                        subscriptions.delete(topic);
+                        updateSubscriptionsTable();
+                        showMessage('Unsubscribed from ' + topic, 'success');
+                    },
+                    onFailure: (err) => {
+                        showMessage('Failed to unsubscribe: ' + err.errorMessage, 'error');
+                    }
+                });
             }
         }
 
