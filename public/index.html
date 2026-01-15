@@ -188,13 +188,28 @@
       bottom: 4vh;
       width: 100%;
       display: flex;
-      justify-content: center;
-      gap: 4vmin;
+      justify-content: space-between;
+      padding: 0 8vmin;
+      box-sizing: border-box;
+    }
+
+    .card-container .lRed,
+    .card-container .lYellow {
+      margin-right: auto;
+    }
+
+    .card-container .lYellow {
+      margin-left: 2vmin;
+    }
+
+    .card-container .rYellow {
+      margin-left: auto;
+      margin-right: 2vmin;
     }
 
     .smCard {
-      width: 4vmin;
-      height: 3vmin;
+      width: 6vmin;
+      height: 4.5vmin;
       border-radius: 0.5vmin;
       display: flex;
       align-items: center;
