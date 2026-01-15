@@ -189,7 +189,7 @@
       width: 100%;
       display: flex;
       justify-content: center;
-      gap: 8vmin;
+      align-items: center;
     }
 
     .smCard {
@@ -201,6 +201,28 @@
       justify-content: center;
       font-weight: bold;
       visibility: hidden;
+      position: absolute;
+    }
+
+    /* Position cards relative to center */
+    .lYellow {
+      right: calc(50% + 12vmin);
+      /* center + 2 card widths */
+    }
+
+    .lRed {
+      right: calc(50% + 18vmin);
+      /* Yellow + 1 card width */
+    }
+
+    .rYellow {
+      left: calc(50% + 12vmin);
+      /* center + 2 card widths */
+    }
+
+    .rRed {
+      left: calc(50% + 18vmin);
+      /* Yellow + 1 card width */
     }
 
     /* Scores */
