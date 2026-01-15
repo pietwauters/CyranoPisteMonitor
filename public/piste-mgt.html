@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Piste Management</title>
+    <style>
+        body {
+            background: #1a1a1a;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #4CAF50;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+
+        .nav-links {
+            margin: 15px 0;
+        }
+
+        .nav-link {
+            display: inline-block;
+            margin-right: 15px;
+            color: #64B5F6;
+            text-decoration: none;
+        }
+
+        .nav-link:hover {
+            text-decoration: underline;
+        }
+
+        .connection-status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+
+        .connection-status.connected {
+            background: #4CAF50;
+        }
+
+        .connection-status.disconnected {
+            background: #f44336;
+        }
+
+        .form-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #333;
+            border-radius: 5px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .form-group {
+            margin: 15px 0;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #bbb;
+            font-weight: bold;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px;
+            background: #444;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        .fencer-section {
+            background: #3a3a3a;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .fencer-section h3 {
+            margin-top: 0;
+            color: #64B5F6;
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 18px;
+            margin: 10px 5px;
+            width: 100%;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        button.secondary {
+            background: #64B5F6;
+        }
+
+        button.secondary:hover {
+            background: #42A5F5;
+        }
+
+        .status {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .status.success {
+            background: #4CAF50;
+            display: block;
+        }
+
+        .status.error {
+            background: #f44336;
+            display: block;
+        }
+
+        .info-text {
+            color: #888;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>
+            Piste Management
+            <span id="mqtt-status" class="connection-status disconnected">Disconnected</span>
+        </h1>
+
+        <div class="nav-links">
+            <a href="/" class="nav-link">← Display</a>
+            <a href="/admin" class="nav-link">Admin Panel</a>
+        </div>
+
+        <div class="form-section">
+            <div class="form-group full-width">
+                <label for="piste-number">Piste Number:</label>
+                <input type="text" id="piste-number" placeholder="001" maxlength="3">
+                <div class="info-text">Enter 3-digit piste number (e.g., 001, 012, 123)</div>
+            </div>
+
+            <div class="form-row">
+                <div class="fencer-section">
+                    <h3>Left Fencer</h3>
+                    <div class="form-group">
+                        <label for="left-name">Name:</label>
+                        <input type="text" id="left-name" placeholder="Fencer Name">
+                    </div>
+                    <div class="form-group">
+                        <label for="left-nationality">Nationality (NOC Code):</label>
+                        <input type="text" id="left-nationality" placeholder="USA" maxlength="3"
+                            style="text-transform: uppercase;">
+                        <div class="info-text">3-letter NOC code (e.g., USA, FRA, GER)</div>
+                    </div>
+                </div>
+
+                <div class="fencer-section">
+                    <h3>Right Fencer</h3>
+                    <div class="form-group">
+                        <label for="right-name">Name:</label>
+                        <input type="text" id="right-name" placeholder="Fencer Name">
+                    </div>
+                    <div class="form-group">
+                        <label for="right-nationality">Nationality (NOC Code):</label>
+                        <input type="text" id="right-nationality" placeholder="USA" maxlength="3"
+                            style="text-transform: uppercase;">
+                        <div class="info-text">3-letter NOC code (e.g., USA, FRA, GER)</div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="send-btn" onclick="sendData()" disabled>Send to Piste</button>
+            <button class="secondary" onclick="clearForm()">Clear Form</button>
+        </div>
+
+        <div id="status-message" class="status"></div>
+    </div>
+
+    <script src="/js/mqttws31.min.js"></script>
+    <script>
+        let client;
+
+        // Connect to MQTT using Paho
+        function connectMQTT() {
+            try {
+                client = new Paho.MQTT.Client(location.hostname, 9001, "pisteMgt_" + Date.now());
+
+                client.onConnectionLost = (responseObject) => {
+                    if (responseObject.errorCode !== 0) {
+                        console.log("Connection lost: " + responseObject.errorMessage);
+                        updateStatus('disconnected');
+                        showMessage('Connection lost: ' + responseObject.errorMessage, 'error');
+                    }
+                };
+
+                client.connect({
+                    onSuccess: () => {
+                        console.log('Connected to MQTT broker');
+                        updateStatus('connected');
+                        showMessage('Connected to MQTT broker', 'success');
+                    },
+                    onFailure: (err) => {
+                        console.error('Connection failed:', err);
+                        updateStatus('disconnected');
+                        showMessage('Connection failed: ' + err.errorMessage, 'error');
+                    }
+                });
+
+            } catch (error) {
+                console.error('Connection error:', error);
+                updateStatus('disconnected');
+                showMessage('Failed to connect: ' + error.message, 'error');
+            }
+        }
+
+        function updateStatus(status) {
+            const statusEl = document.getElementById('mqtt-status');
+            const sendBtn = document.getElementById('send-btn');
+
+            statusEl.textContent = status === 'connected' ? 'Connected' : 'Disconnected';
+            statusEl.className = 'connection-status ' + status;
+            sendBtn.disabled = status !== 'connected';
+        }
+
+        function showMessage(message, type) {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status ' + type;
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function validateForm() {
+            const pisteNumber = document.getElementById('piste-number').value.trim();
+            const leftName = document.getElementById('left-name').value.trim();
+            const leftNationality = document.getElementById('left-nationality').value.trim().toUpperCase();
+            const rightName = document.getElementById('right-name').value.trim();
+            const rightNationality = document.getElementById('right-nationality').value.trim().toUpperCase();
+
+            if (!pisteNumber) {
+                showMessage('Please enter a piste number', 'error');
+                return null;
+            }
+
+            if (!leftName || !leftNationality) {
+                showMessage('Please enter left fencer name and nationality', 'error');
+                return null;
+            }
+
+            if (!rightName || !rightNationality) {
+                showMessage('Please enter right fencer name and nationality', 'error');
+                return null;
+            }
+
+            if (leftNationality.length !== 3 || rightNationality.length !== 3) {
+                showMessage('Nationality codes must be exactly 3 letters', 'error');
+                return null;
+            }
+
+            return {
+                pisteNumber: pisteNumber.padStart(3, '0'),
+                leftName: leftName,
+                leftNationality: leftNationality,
+                rightName: rightName,
+                rightNationality: rightNationality
+            };
+        }
+
+        function sendData() {
+            if (!client || !client.isConnected()) {
+                showMessage('Not connected to MQTT broker', 'error');
+                return;
+            }
+
+            const data = validateForm();
+            if (!data) {
+                return;
+            }
+
+            try {
+                const topic = `MQTT_Cyrano/Piste_${data.pisteNumber}/FromSoftware`;
+                const payload = {
+                    Protocol: "EFP1.1",
+                    Com: "DISP",
+                    Piste: parseInt(data.pisteNumber, 10).toString(),
+                    Compe: "1",
+                    RightName: data.rightName,
+                    RightNat: data.rightNationality,
+                    LeftName: data.leftName,
+                    LeftNat: data.leftNationality
+                };
+
+                const message = new Paho.MQTT.Message(JSON.stringify(payload));
+                message.destinationName = topic;
+                client.send(message);
+
+                showMessage(`Data sent to piste ${data.pisteNumber}`, 'success');
+                console.log('Published to:', topic, 'Payload:', payload);
+            } catch (error) {
+                showMessage('Failed to send: ' + error.message, 'error');
+            }
+        }
+
+        function clearForm() {
+            document.getElementById('piste-number').value = '';
+            document.getElementById('left-name').value = '';
+            document.getElementById('left-nationality').value = '';
+            document.getElementById('right-name').value = '';
+            document.getElementById('right-nationality').value = '';
+            showMessage('Form cleared', 'success');
+        }
+
+        // Auto-uppercase nationality codes
+        document.getElementById('left-nationality').addEventListener('input', (e) => {
+            e.target.value = e.target.value.toUpperCase();
+        });
+
+        document.getElementById('right-nationality').addEventListener('input', (e) => {
+            e.target.value = e.target.value.toUpperCase();
+        });
+
+        // Initialize connection on page load
+        window.addEventListener('load', () => {
+            connectMQTT();
+        });
+    </script>
+</body>
+
+</html>

@@ -11,6 +11,11 @@ app.get('/admin', (req, res) => {
   res.sendFile(__dirname + '/public/admin.html');
 });
 
+// Piste Management page route
+app.get('/piste-mgt', (req, res) => {
+  res.sendFile(__dirname + '/public/piste-mgt.html');
+});
+
 // MQTT Client Configuration
 const mqttBroker = 'mqtt://localhost:1883';
 const client = mqtt.connect(mqttBroker);
