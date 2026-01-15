@@ -332,23 +332,44 @@
 
             try {
                 const topic = `MQTT_Cyrano/Piste_${data.pisteNumber}/FromSoftware`;
-                const payload = {
+                const pisteNum = parseInt(data.pisteNumber, 10).toString();
+
+                // First, send ACK message
+                const ackPayload = {
                     Protocol: "EFP1.1",
-                    Com: "DISP",
-                    Piste: parseInt(data.pisteNumber, 10).toString(),
-                    Compe: "1",
-                    RightName: data.rightName,
-                    RightNat: data.rightNationality,
-                    LeftName: data.leftName,
-                    LeftNat: data.leftNationality
+                    Com: "ACK",
+                    Piste: pisteNum,
+                    Compe: "1"
                 };
 
-                const message = new Paho.MQTT.Message(JSON.stringify(payload));
-                message.destinationName = topic;
-                client.send(message);
+                const ackMessage = new Paho.MQTT.Message(JSON.stringify(ackPayload));
+                ackMessage.destinationName = topic;
+                client.send(ackMessage);
 
-                showMessage(`Data sent to piste ${data.pisteNumber}`, 'success');
-                console.log('Published to:', topic, 'Payload:', payload);
+                console.log('Published ACK to:', topic, 'Payload:', ackPayload);
+                showMessage(`Sending ACK to piste ${data.pisteNumber}...`, 'success');
+
+                // Wait 1 second, then send DISP message
+                setTimeout(() => {
+                    const dispPayload = {
+                        Protocol: "EFP1.1",
+                        Com: "DISP",
+                        Piste: pisteNum,
+                        Compe: "1",
+                        RightName: data.rightName,
+                        RightNat: data.rightNationality,
+                        LeftName: data.leftName,
+                        LeftNat: data.leftNationality
+                    };
+
+                    const dispMessage = new Paho.MQTT.Message(JSON.stringify(dispPayload));
+                    dispMessage.destinationName = topic;
+                    client.send(dispMessage);
+
+                    showMessage(`Data sent to piste ${data.pisteNumber}`, 'success');
+                    console.log('Published DISP to:', topic, 'Payload:', dispPayload);
+                }, 1000);
+
             } catch (error) {
                 showMessage('Failed to send: ' + error.message, 'error');
             }
