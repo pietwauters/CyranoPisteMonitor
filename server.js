@@ -6,28 +6,9 @@ const fs = require('fs');
 const app = express();
 const port = 3000;
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const pisteNumber = req.body.pisteNumber;
-    const uploadPath = path.join(__dirname, 'public', 'fencers', `piste-${pisteNumber}`);
-    
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const position = req.body.position; // 'left' or 'right'
-    const ext = path.extname(file.originalname);
-    cb(null, `${position}${ext}`);
-  }
-});
-
+// Configure multer for file uploads - use memory storage first
 const upload = multer({
-  storage: storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif/;
@@ -64,13 +45,37 @@ app.post('/upload-fencer-image', upload.single('image'), (req, res) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
     
+    const pisteNumber = req.body.pisteNumber;
+    const position = req.body.position;
+    
+    if (!pisteNumber || !position) {
+      return res.status(400).json({ error: 'Missing pisteNumber or position' });
+    }
+    
+    // Create directory path
+    const uploadPath = path.join(__dirname, 'public', 'fencers', `piste-${pisteNumber}`);
+    
+    // Create directory if it doesn't exist
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    
+    // Determine file extension and create filename
+    const ext = path.extname(req.file.originalname);
+    const filename = `${position}${ext}`;
+    const filepath = path.join(uploadPath, filename);
+    
+    // Write file to disk
+    fs.writeFileSync(filepath, req.file.buffer);
+    
     res.json({
       success: true,
       message: 'Image uploaded successfully',
-      filename: req.file.filename,
-      path: `/fencers/piste-${req.body.pisteNumber}/${req.file.filename}`
+      filename: filename,
+      path: `/fencers/piste-${pisteNumber}/${filename}`
     });
   } catch (error) {
+    console.error('Upload error:', error);
     res.status(500).json({ error: error.message });
   }
 });
