@@ -178,28 +178,71 @@
         }
 
         .photo-preview {
-            width: 150px;
-            height: 150px;
+            width: 200px;
+            height: 250px;
             border: 2px dashed #666;
             border-radius: 5px;
             margin: 10px auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            position: relative;
             overflow: hidden;
-            background: #333;
+            background: #222;
+            cursor: move;
         }
 
         .photo-preview img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: center center;
+            user-select: none;
+            -webkit-user-drag: none;
         }
 
         .photo-preview-empty {
             color: #888;
             text-align: center;
             font-size: 14px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .zoom-controls {
+            margin-top: 10px;
+        }
+
+        .zoom-controls label {
+            display: inline-block;
+            margin-right: 10px;
+            font-size: 14px;
+        }
+
+        .zoom-slider {
+            width: 60%;
+            vertical-align: middle;
+        }
+
+        .zoom-value {
+            display: inline-block;
+            width: 50px;
+            text-align: center;
+            color: #aaa;
+            font-size: 14px;
+        }
+
+        .reset-btn {
+            background: #607D8B;
+            padding: 5px 15px;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+
+        .reset-btn:hover {
+            background: #546E7A;
         }
 
         .file-input-wrapper {
@@ -300,6 +343,15 @@
                             <input type="file" id="left-photo" accept="image/*">
                             <label for="left-photo" class="file-input-label">Choose Photo</label>
                         </div>
+                        <div class="zoom-controls">
+                            <label>Zoom:</label>
+                            <input type="range" class="zoom-slider" id="left-zoom" min="100" max="300" value="100"
+                                disabled>
+                            <span class="zoom-value" id="left-zoom-value">100%</span>
+                            <button class="reset-btn" onclick="resetImage('left')" disabled
+                                id="left-reset-btn">Reset</button>
+                        </div>
+                        <div class="info-text">Drag image to reposition, use slider to zoom</div>
                         <button class="upload-photo-btn" onclick="uploadPhoto('left')" disabled
                             id="left-upload-btn">Upload Photo</button>
                         <button class="remove-photo-btn" onclick="removePhoto('left')">Remove Photo</button>
@@ -327,6 +379,15 @@
                             <input type="file" id="right-photo" accept="image/*">
                             <label for="right-photo" class="file-input-label">Choose Photo</label>
                         </div>
+                        <div class="zoom-controls">
+                            <label>Zoom:</label>
+                            <input type="range" class="zoom-slider" id="right-zoom" min="100" max="300" value="100"
+                                disabled>
+                            <span class="zoom-value" id="right-zoom-value">100%</span>
+                            <button class="reset-btn" onclick="resetImage('right')" disabled
+                                id="right-reset-btn">Reset</button>
+                        </div>
+                        <div class="info-text">Drag image to reposition, use slider to zoom</div>
                         <button class="upload-photo-btn" onclick="uploadPhoto('right')" disabled
                             id="right-upload-btn">Upload Photo</button>
                         <button class="remove-photo-btn" onclick="removePhoto('right')">Remove Photo</button>
@@ -506,26 +567,116 @@
             e.target.value = e.target.value.toUpperCase();
         });
 
-        // Photo preview and upload functionality
+        // Photo preview and upload functionality with zoom/pan
+        const imageState = {
+            left: { scale: 1, offsetX: 0, offsetY: 0, img: null, isDragging: false, startX: 0, startY: 0 },
+            right: { scale: 1, offsetX: 0, offsetY: 0, img: null, isDragging: false, startX: 0, startY: 0 }
+        };
+
         function setupPhotoInput(position) {
             const input = document.getElementById(`${position}-photo`);
             const preview = document.getElementById(`${position}-preview`);
             const uploadBtn = document.getElementById(`${position}-upload-btn`);
+            const zoomSlider = document.getElementById(`${position}-zoom`);
+            const zoomValue = document.getElementById(`${position}-zoom-value`);
+            const resetBtn = document.getElementById(`${position}-reset-btn`);
 
             input.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (file) {
                     const reader = new FileReader();
                     reader.onload = (event) => {
-                        preview.innerHTML = `<img src="${event.target.result}" alt="${position} fencer">`;
-                        uploadBtn.disabled = false;
+                        const img = new Image();
+                        img.onload = () => {
+                            imageState[position].img = img;
+                            resetImage(position);
+                            uploadBtn.disabled = false;
+                            zoomSlider.disabled = false;
+                            resetBtn.disabled = false;
+                            setupDragHandlers(position);
+                        };
+                        img.src = event.target.result;
                     };
                     reader.readAsDataURL(file);
                 } else {
                     preview.innerHTML = '<div class="photo-preview-empty">No photo selected</div>';
                     uploadBtn.disabled = true;
+                    zoomSlider.disabled = true;
+                    resetBtn.disabled = true;
+                    imageState[position].img = null;
                 }
             });
+
+            // Zoom slider handler
+            zoomSlider.addEventListener('input', (e) => {
+                imageState[position].scale = e.target.value / 100;
+                zoomValue.textContent = e.target.value + '%';
+                updatePreview(position);
+            });
+        }
+
+        function setupDragHandlers(position) {
+            const preview = document.getElementById(`${position}-preview`);
+            const img = preview.querySelector('img');
+
+            if (!img) return;
+
+            img.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                imageState[position].isDragging = true;
+                imageState[position].startX = e.clientX - imageState[position].offsetX;
+                imageState[position].startY = e.clientY - imageState[position].offsetY;
+                img.style.cursor = 'grabbing';
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (imageState[position].isDragging) {
+                    imageState[position].offsetX = e.clientX - imageState[position].startX;
+                    imageState[position].offsetY = e.clientY - imageState[position].startY;
+                    updatePreview(position);
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (imageState[position].isDragging) {
+                    imageState[position].isDragging = false;
+                    const img = preview.querySelector('img');
+                    if (img) img.style.cursor = 'move';
+                }
+            });
+        }
+
+        function updatePreview(position) {
+            const preview = document.getElementById(`${position}-preview`);
+            const img = preview.querySelector('img');
+
+            if (!img) return;
+
+            const scale = imageState[position].scale;
+            const offsetX = imageState[position].offsetX;
+            const offsetY = imageState[position].offsetY;
+
+            img.style.transform = `scale(${scale}) translate(${offsetX / scale}px, ${offsetY / scale}px)`;
+        }
+
+        function resetImage(position) {
+            const preview = document.getElementById(`${position}-preview`);
+            const state = imageState[position];
+
+            state.scale = 1;
+            state.offsetX = 0;
+            state.offsetY = 0;
+
+            const zoomSlider = document.getElementById(`${position}-zoom`);
+            const zoomValue = document.getElementById(`${position}-zoom-value`);
+            zoomSlider.value = 100;
+            zoomValue.textContent = '100%';
+
+            if (state.img) {
+                preview.innerHTML = `<img src="${state.img.src}" alt="${position} fencer">`;
+                updatePreview(position);
+                setupDragHandlers(position);
+            }
         }
 
         async function uploadPhoto(position) {
@@ -536,35 +687,84 @@
             }
 
             const paddedPiste = pisteNumber.padStart(3, '0');
-            const input = document.getElementById(`${position}-photo`);
-            const file = input.files[0];
+            const state = imageState[position];
 
-            if (!file) {
+            if (!state.img) {
                 showMessage('Please select a photo first', 'error');
                 return;
             }
 
-            const formData = new FormData();
-            formData.append('image', file);
-            formData.append('pisteNumber', paddedPiste);
-            formData.append('position', position);
+            // Create canvas to crop the image
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
 
-            try {
-                const response = await fetch('/upload-fencer-image', {
-                    method: 'POST',
-                    body: formData
-                });
+            // Set canvas to match display size (4:5 aspect ratio)
+            const displayWidth = 200;
+            const displayHeight = 250;
+            canvas.width = displayWidth;
+            canvas.height = displayHeight;
 
-                const result = await response.json();
+            // Calculate source dimensions based on zoom and pan
+            const scale = state.scale;
+            const offsetX = state.offsetX;
+            const offsetY = state.offsetY;
 
-                if (response.ok) {
-                    showMessage(`${position.charAt(0).toUpperCase() + position.slice(1)} fencer photo uploaded successfully`, 'success');
-                } else {
-                    showMessage('Upload failed: ' + result.error, 'error');
-                }
-            } catch (error) {
-                showMessage('Upload failed: ' + error.message, 'error');
+            // Draw the transformed image onto canvas
+            ctx.fillStyle = '#222';
+            ctx.fillRect(0, 0, displayWidth, displayHeight);
+
+            // Calculate how the image fits with object-fit: cover
+            const imgAspect = state.img.width / state.img.height;
+            const containerAspect = displayWidth / displayHeight;
+
+            let drawWidth, drawHeight, drawX, drawY;
+
+            if (imgAspect > containerAspect) {
+                // Image is wider - fit to height
+                drawHeight = displayHeight;
+                drawWidth = drawHeight * imgAspect;
+                drawX = (displayWidth - drawWidth) / 2;
+                drawY = 0;
+            } else {
+                // Image is taller - fit to width
+                drawWidth = displayWidth;
+                drawHeight = drawWidth / imgAspect;
+                drawX = 0;
+                drawY = (displayHeight - drawHeight) / 2;
             }
+
+            // Apply scale and offset
+            const scaledWidth = drawWidth * scale;
+            const scaledHeight = drawHeight * scale;
+            const scaledX = drawX + offsetX + (drawWidth - scaledWidth) / 2;
+            const scaledY = drawY + offsetY + (drawHeight - scaledHeight) / 2;
+
+            ctx.drawImage(state.img, scaledX, scaledY, scaledWidth, scaledHeight);
+
+            // Convert canvas to blob
+            canvas.toBlob(async (blob) => {
+                const formData = new FormData();
+                formData.append('image', blob, 'fencer.jpg');
+                formData.append('pisteNumber', paddedPiste);
+                formData.append('position', position);
+
+                try {
+                    const response = await fetch('/upload-fencer-image', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        showMessage(`${position.charAt(0).toUpperCase() + position.slice(1)} fencer photo uploaded successfully`, 'success');
+                    } else {
+                        showMessage('Upload failed: ' + result.error, 'error');
+                    }
+                } catch (error) {
+                    showMessage('Upload failed: ' + error.message, 'error');
+                }
+            }, 'image/jpeg', 0.9);
         }
 
         async function removePhoto(position) {
