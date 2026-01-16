@@ -146,6 +146,35 @@
       display: none;
     }
 
+    /* Fencer photos */
+    .fencer-photos {
+      display: flex;
+      justify-content: space-between;
+      padding: 0 4vmin;
+      margin: 3vmin 0;
+      height: 25vmin;
+    }
+
+    .fencer-photo {
+      width: 20vmin;
+      height: 25vmin;
+      border-radius: 1vmin;
+      overflow: hidden;
+      background: #222;
+      border: 0.3vmin solid #444;
+      display: none;
+    }
+
+    .fencer-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .fencer-photo.visible {
+      display: block;
+    }
+
     /* Lights */
     .light-container {
       display: flex;
@@ -353,6 +382,15 @@
         <img class="national-flag right-flag" alt="Right flag">
       </div>
 
+      <div class="fencer-photos">
+        <div class="fencer-photo left-photo">
+          <img alt="Left fencer">
+        </div>
+        <div class="fencer-photo right-photo">
+          <img alt="Right fencer">
+        </div>
+      </div>
+
       <div class="timer-container">
         <div class="clock smClock">0:00</div>
         <div class="period smPeriod">1</div>
@@ -426,6 +464,7 @@
           onSuccess: () => {
             client.subscribe(`MQTT_Cyrano/Piste_${currentPiste}/#`);
             document.querySelector('.poolNum').textContent = `Strip_${currentPiste}`;
+            loadFencerPhotos();
           },
           onFailure: (err) => console.error("Connection failed:", err)
         });
@@ -451,6 +490,7 @@
         client.subscribe(`MQTT_Cyrano/Piste_${currentPiste}/#`);
         resetDisplay();
         document.querySelector('.poolNum').textContent = `Strip_${currentPiste}`;
+        loadFencerPhotos();
       }
     });
 
@@ -480,7 +520,11 @@
         rWhite: document.querySelector('.rWhite')
       },
       leftFlag: document.querySelector('.right-flag'),
-      rightFlag: document.querySelector('.left-flag')
+      rightFlag: document.querySelector('.left-flag'),
+      leftPhoto: document.querySelector('.left-photo'),
+      rightPhoto: document.querySelector('.right-photo'),
+      leftPhotoImg: document.querySelector('.left-photo img'),
+      rightPhotoImg: document.querySelector('.right-photo img')
     };
 
     client.onMessageArrived = (message) => {
@@ -677,6 +721,48 @@
         flagElement.style.display = 'none';
         flagElement.src = '';
       }
+    }
+
+    function loadFencerPhotos() {
+      if (!currentPiste) return;
+
+      // Load left fencer photo
+      loadPhoto('left', currentPiste);
+      // Load right fencer photo
+      loadPhoto('right', currentPiste);
+    }
+
+    function loadPhoto(position, pisteNumber) {
+      const photoElement = position === 'left' ? elements.leftPhoto : elements.rightPhoto;
+      const imgElement = position === 'left' ? elements.leftPhotoImg : elements.rightPhotoImg;
+
+      // Try common image extensions
+      const extensions = ['jpg', 'jpeg', 'png', 'gif'];
+      let extensionIndex = 0;
+
+      function tryNextExtension() {
+        if (extensionIndex >= extensions.length) {
+          // All extensions failed, hide photo
+          photoElement.classList.remove('visible');
+          return;
+        }
+
+        const ext = extensions[extensionIndex];
+        const photoUrl = `/fencers/piste-${pisteNumber}/${position}.${ext}?t=${Date.now()}`;
+
+        const testImg = new Image();
+        testImg.onload = () => {
+          imgElement.src = photoUrl;
+          photoElement.classList.add('visible');
+        };
+        testImg.onerror = () => {
+          extensionIndex++;
+          tryNextExtension();
+        };
+        testImg.src = photoUrl;
+      }
+
+      tryNextExtension();
     }
     window.addEventListener('resize', handleResize);
 

@@ -169,6 +169,79 @@
             font-size: 14px;
             margin-top: 5px;
         }
+
+        .photo-upload-group {
+            margin-top: 15px;
+            padding: 15px;
+            background: #444;
+            border-radius: 5px;
+        }
+
+        .photo-preview {
+            width: 150px;
+            height: 150px;
+            border: 2px dashed #666;
+            border-radius: 5px;
+            margin: 10px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: #333;
+        }
+
+        .photo-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .photo-preview-empty {
+            color: #888;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 10px;
+            background: #555;
+            color: white;
+            text-align: center;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .file-input-label:hover {
+            background: #666;
+        }
+
+        .upload-photo-btn {
+            background: #FF9800;
+            margin-top: 10px;
+        }
+
+        .upload-photo-btn:hover {
+            background: #F57C00;
+        }
+
+        .upload-photo-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 
@@ -204,6 +277,18 @@
                             style="text-transform: uppercase;">
                         <div class="info-text">3-letter NOC code (e.g., USA, FRA, GER)</div>
                     </div>
+                    <div class="photo-upload-group">
+                        <label>Photo:</label>
+                        <div class="photo-preview" id="left-preview">
+                            <div class="photo-preview-empty">No photo selected</div>
+                        </div>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="left-photo" accept="image/*">
+                            <label for="left-photo" class="file-input-label">Choose Photo</label>
+                        </div>
+                        <button class="upload-photo-btn" onclick="uploadPhoto('left')" disabled
+                            id="left-upload-btn">Upload Photo</button>
+                    </div>
                 </div>
 
                 <div class="fencer-section">
@@ -217,6 +302,18 @@
                         <input type="text" id="right-nationality" placeholder="USA" maxlength="3"
                             style="text-transform: uppercase;">
                         <div class="info-text">3-letter NOC code (e.g., USA, FRA, GER)</div>
+                    </div>
+                    <div class="photo-upload-group">
+                        <label>Photo:</label>
+                        <div class="photo-preview" id="right-preview">
+                            <div class="photo-preview-empty">No photo selected</div>
+                        </div>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="right-photo" accept="image/*">
+                            <label for="right-photo" class="file-input-label">Choose Photo</label>
+                        </div>
+                        <button class="upload-photo-btn" onclick="uploadPhoto('right')" disabled
+                            id="right-upload-btn">Upload Photo</button>
                     </div>
                 </div>
             </div>
@@ -392,6 +489,70 @@
         document.getElementById('right-nationality').addEventListener('input', (e) => {
             e.target.value = e.target.value.toUpperCase();
         });
+
+        // Photo preview and upload functionality
+        function setupPhotoInput(position) {
+            const input = document.getElementById(`${position}-photo`);
+            const preview = document.getElementById(`${position}-preview`);
+            const uploadBtn = document.getElementById(`${position}-upload-btn`);
+
+            input.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        preview.innerHTML = `<img src="${event.target.result}" alt="${position} fencer">`;
+                        uploadBtn.disabled = false;
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    preview.innerHTML = '<div class="photo-preview-empty">No photo selected</div>';
+                    uploadBtn.disabled = true;
+                }
+            });
+        }
+
+        async function uploadPhoto(position) {
+            const pisteNumber = document.getElementById('piste-number').value.trim();
+            if (!pisteNumber) {
+                showMessage('Please enter a piste number first', 'error');
+                return;
+            }
+
+            const paddedPiste = pisteNumber.padStart(3, '0');
+            const input = document.getElementById(`${position}-photo`);
+            const file = input.files[0];
+
+            if (!file) {
+                showMessage('Please select a photo first', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('pisteNumber', paddedPiste);
+            formData.append('position', position);
+
+            try {
+                const response = await fetch('/upload-fencer-image', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage(`${position.charAt(0).toUpperCase() + position.slice(1)} fencer photo uploaded successfully`, 'success');
+                } else {
+                    showMessage('Upload failed: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Upload failed: ' + error.message, 'error');
+            }
+        }
+
+        setupPhotoInput('left');
+        setupPhotoInput('right');
 
         // Initialize connection on page load
         window.addEventListener('load', () => {
