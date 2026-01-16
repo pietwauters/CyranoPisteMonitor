@@ -80,6 +80,41 @@ app.post('/upload-fencer-image', upload.single('image'), (req, res) => {
   }
 });
 
+// Delete fencer image endpoint
+app.delete('/delete-fencer-image/:pisteNumber/:position', (req, res) => {
+  try {
+    const pisteNumber = req.params.pisteNumber;
+    const position = req.params.position;
+    
+    const dirPath = path.join(__dirname, 'public', 'fencers', `piste-${pisteNumber}`);
+    
+    if (!fs.existsSync(dirPath)) {
+      return res.json({ success: true, message: 'No images to delete' });
+    }
+    
+    // Find and delete any file with the position name (any extension)
+    const files = fs.readdirSync(dirPath);
+    const extensions = ['jpg', 'jpeg', 'png', 'gif'];
+    let deleted = false;
+    
+    files.forEach(file => {
+      const fileBase = path.parse(file).name;
+      if (fileBase === position) {
+        fs.unlinkSync(path.join(dirPath, file));
+        deleted = true;
+      }
+    });
+    
+    res.json({
+      success: true,
+      message: deleted ? 'Image deleted successfully' : 'No image found'
+    });
+  } catch (error) {
+    console.error('Delete error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Serve static files (HTML/CSS/JS) - must come after specific routes
 app.use(express.static('public'));
 

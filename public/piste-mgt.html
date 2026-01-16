@@ -242,6 +242,20 @@
             background: #666;
             cursor: not-allowed;
         }
+
+        .remove-photo-btn {
+            background: #f44336;
+            margin-top: 5px;
+        }
+
+        .remove-photo-btn:hover {
+            background: #d32f2f;
+        }
+
+        .remove-photo-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 
@@ -288,6 +302,7 @@
                         </div>
                         <button class="upload-photo-btn" onclick="uploadPhoto('left')" disabled
                             id="left-upload-btn">Upload Photo</button>
+                        <button class="remove-photo-btn" onclick="removePhoto('left')">Remove Photo</button>
                     </div>
                 </div>
 
@@ -314,6 +329,7 @@
                         </div>
                         <button class="upload-photo-btn" onclick="uploadPhoto('right')" disabled
                             id="right-upload-btn">Upload Photo</button>
+                        <button class="remove-photo-btn" onclick="removePhoto('right')">Remove Photo</button>
                     </div>
                 </div>
             </div>
@@ -548,6 +564,40 @@
                 }
             } catch (error) {
                 showMessage('Upload failed: ' + error.message, 'error');
+            }
+        }
+
+        async function removePhoto(position) {
+            const pisteNumber = document.getElementById('piste-number').value.trim();
+            if (!pisteNumber) {
+                showMessage('Please enter a piste number first', 'error');
+                return;
+            }
+
+            const paddedPiste = pisteNumber.padStart(3, '0');
+
+            if (!confirm(`Remove ${position} fencer photo for piste ${paddedPiste}?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/delete-fencer-image/${paddedPiste}/${position}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage(`${position.charAt(0).toUpperCase() + position.slice(1)} fencer photo removed`, 'success');
+                    // Clear the preview and input
+                    document.getElementById(`${position}-photo`).value = '';
+                    document.getElementById(`${position}-preview`).innerHTML = '<div class="photo-preview-empty">No photo selected</div>';
+                    document.getElementById(`${position}-upload-btn`).disabled = true;
+                } else {
+                    showMessage('Remove failed: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Remove failed: ' + error.message, 'error');
             }
         }
 
