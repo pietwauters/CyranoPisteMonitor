@@ -15,49 +15,55 @@ if ! command -v node &> /dev/null; then
     exit 1
 fi
 
-NODE_PATH=$(which node)
-echo "Node.js path: $NODE_PATH"
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Create the service file
-SERVICE_FILE="/tmp/mqtt-web.service"
-cat > "$SERVICE_FILE" << EOF
-[Unit]
-Description=MQTT Web Dashboard
-After=network.target
+# StartAtBoot.sh — switch startup to PM2-based process manager
+# This script will:
+#  - install PM2 if missing
+#  - remove the old systemd unit `mqtt-web.service` if present
+#  - start the app under PM2 with one process per CPU
+#  - configure PM2 to resurrect processes at boot
 
-[Service]
-Type=simple
-User=$CURRENT_USER
-WorkingDirectory=$SCRIPT_DIR
-ExecStart=$NODE_PATH $SCRIPT_DIR/server.js
-Restart=on-failure
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=mqtt-web
+APP_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+APP_USER="${SUDO_USER:-$USER}"
+HOME_DIR="$(eval echo ~${APP_USER})"
 
-[Install]
-WantedBy=multi-user.target
-EOF
+echo "App dir: $APP_DIR"
+echo "App user: $APP_USER"
 
-# Copy service file to systemd
-echo "Installing service (requires sudo)..."
-sudo cp "$SERVICE_FILE" /etc/systemd/system/mqtt-web.service
-sudo systemctl daemon-reload
-sudo systemctl enable mqtt-web.service
-sudo systemctl start mqtt-web.service
+cd "$APP_DIR"
 
-# Clean up
-rm "$SERVICE_FILE"
+# Ensure Node.js is available
+if ! command -v node &>/dev/null; then
+    echo "Error: Node.js is not installed. Please install Node.js first."
+    exit 1
+fi
 
-echo ""
-echo "✓ Service installed and started successfully!"
-echo ""
-echo "Useful commands:"
-echo "  Check status:  sudo systemctl status mqtt-web.service"
-echo "  View logs:     sudo journalctl -u mqtt-web.service -f"
-echo "  Stop service:  sudo systemctl stop mqtt-web.service"
-echo "  Restart:       sudo systemctl restart mqtt-web.service"
-echo ""
-echo "The server will now start automatically at boot."
-echo "Access the dashboard at: http://localhost:3000"
+# Install pm2 if missing
+if ! command -v pm2 &>/dev/null; then
+    echo "Installing pm2 globally... (requires sudo)"
+    sudo npm install -g pm2
+fi
+
+# Remove old systemd unit if it exists
+if sudo systemctl list-unit-files --type=service | grep -q '^mqtt-web.service'; then
+    echo "Removing existing mqtt-web.service..."
+    sudo systemctl stop mqtt-web.service || true
+    sudo systemctl disable mqtt-web.service || true
+    sudo rm -f /etc/systemd/system/mqtt-web.service
+    sudo systemctl daemon-reload || true
+fi
+
+echo "Starting app under PM2 (one process per CPU)..."
+pm2 start server.js -i max --name mqtt-web --cwd "$APP_DIR"
+
+echo "Configuring PM2 to start on boot for user $APP_USER..."
+# Create the systemd startup unit for PM2 (runs as the app user)
+sudo pm2 startup systemd -u "$APP_USER" --hp "$HOME_DIR"
+
+echo "Saving PM2 process list for resurrection on reboot..."
+pm2 save
+
+echo "Done. Check status with: pm2 status"
+echo "View logs: pm2 logs mqtt-web"
