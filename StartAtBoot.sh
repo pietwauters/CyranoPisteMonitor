@@ -18,14 +18,12 @@ fi
 #!/usr/bin/env bash
 set -euo pipefail
 
-# StartAtBoot.sh — switch startup to PM2-based process manager
-# This script will:
-#  - install PM2 if missing
-#  - remove the old systemd unit `mqtt-web.service` if present
-#  - start the app under PM2 with one process per CPU
-#  - configure PM2 to resurrect processes at boot
+# StartAtBoot.sh — safe PM2 setup for running mqtt-web as the app user
+# Usage: run as the app user (recommended) or with sudo; script will
+# detect the original user and ensure pm2 processes run under that user.
 
 APP_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+# prefer SUDO_USER if the script was invoked with sudo, otherwise current user
 APP_USER="${SUDO_USER:-$USER}"
 HOME_DIR="$(eval echo ~${APP_USER})"
 
@@ -40,30 +38,26 @@ if ! command -v node &>/dev/null; then
     exit 1
 fi
 
-# Install pm2 if missing
+# Install pm2 globally if missing (requires sudo)
 if ! command -v pm2 &>/dev/null; then
-    echo "Installing pm2 globally... (requires sudo)"
+    echo "Installing pm2 globally..."
     sudo npm install -g pm2
 fi
 
-# Remove old systemd unit if it exists
-if sudo systemctl list-unit-files --type=service | grep -q '^mqtt-web.service'; then
-    echo "Removing existing mqtt-web.service..."
-    sudo systemctl stop mqtt-web.service || true
-    sudo systemctl disable mqtt-web.service || true
-    sudo rm -f /etc/systemd/system/mqtt-web.service
-    sudo systemctl daemon-reload || true
-fi
+# Ensure PM2 home directory exists and is owned by the app user
+sudo mkdir -p "$HOME_DIR/.pm2"
+sudo chown -R "$APP_USER":"$APP_USER" "$HOME_DIR/.pm2"
 
-echo "Starting app under PM2 (one process per CPU)..."
-pm2 start server.js -i max --name mqtt-web --cwd "$APP_DIR"
+echo "Starting app under PM2 as user $APP_USER (one process per CPU)..."
+# Start the app as the app user so PM2 and processes are owned by that user
+sudo -u "$APP_USER" pm2 start server.js -i max --name mqtt-web --cwd "$APP_DIR"
+
+echo "Saving PM2 process list (as $APP_USER)..."
+sudo -u "$APP_USER" pm2 save
 
 echo "Configuring PM2 to start on boot for user $APP_USER..."
-# Create the systemd startup unit for PM2 (runs as the app user)
+# This creates the systemd unit (runs as root) but targets the app user
 sudo pm2 startup systemd -u "$APP_USER" --hp "$HOME_DIR"
 
-echo "Saving PM2 process list for resurrection on reboot..."
-pm2 save
-
-echo "Done. Check status with: pm2 status"
-echo "View logs: pm2 logs mqtt-web"
+echo "Done. Check status with: sudo -u $APP_USER pm2 status"
+echo "View logs: sudo -u $APP_USER pm2 logs mqtt-web"
