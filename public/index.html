@@ -520,8 +520,8 @@
         lWhite: document.querySelector('.lWhite'),
         rWhite: document.querySelector('.rWhite')
       },
-      leftFlag: document.querySelector('.right-flag'),
-      rightFlag: document.querySelector('.left-flag'),
+      leftFlag: document.querySelector('.left-flag'),
+      rightFlag: document.querySelector('.right-flag'),
       leftPhoto: document.querySelector('.left-photo'),
       rightPhoto: document.querySelector('.right-photo'),
       leftPhotoImg: document.querySelector('.left-photo img'),
@@ -565,31 +565,31 @@
     }
 
     function updateDisplay(data) {
-      // Update names and scores (corrected mapping)
+      // Update names and scores
       elements.leftName.textContent = data.LeftName || "";
       elements.rightName.textContent = data.RightName || "";
-      elements.leftScore.textContent = data.Rscore || "0";
-      elements.rightScore.textContent = data.Lscore || "0";
+      elements.leftScore.textContent = data.Lscore || "0";
+      elements.rightScore.textContent = data.Rscore || "0";
 
       // Update timer and period
       elements.clock.textContent = data.Stopwatch || "0:00";
       elements.period.textContent = data.Round || "1";
 
-      // Update cards (corrected mapping)
-      updateCard(elements.cards.lRed, data.RRcard);
-      updateCard(elements.cards.lYellow, data.RYcard);
-      updateCard(elements.cards.rRed, data.LRcard);
-      updateCard(elements.cards.rYellow, data.LYcard);
+      // Update cards
+      updateCard(elements.cards.lRed, data.LRcard);
+      updateCard(elements.cards.lYellow, data.LYcard);
+      updateCard(elements.cards.rRed, data.RRcard);
+      updateCard(elements.cards.rYellow, data.RYcard);
 
-      // Update P-Cards (corrected mapping)
-      updatePCard(elements.cards.lPCard, data['RP-card']);
-      updatePCard(elements.cards.rPCard, data['LP-card']);
+      // Update P-Cards
+      updatePCard(elements.cards.lPCard, data['LP-card']);
+      updatePCard(elements.cards.rPCard, data['RP-card']);
 
-      // Update lights (corrected mapping)
-      updateLight(elements.lights.lColor, data.RLight);
-      updateLight(elements.lights.rColor, data.LLight);
-      updateLight(elements.lights.lWhite, data.RWlight);
-      updateLight(elements.lights.rWhite, data.LWlight);
+      // Update lights
+      updateLight(elements.lights.lColor, data.LLight);
+      updateLight(elements.lights.rColor, data.RLight);
+      updateLight(elements.lights.lWhite, data.LWlight);
+      updateLight(elements.lights.rWhite, data.RWlight);
       // Update priority indicators
       const priority = data.Priority || '';
       elements.leftPriority.style.display = 'none';
@@ -604,8 +604,8 @@
         elements.rightPriority.textContent = 'P';
         elements.rightPriority.style.display = 'block';
       }
-      updateFlag(elements.leftFlag, data.RightNat);
-      updateFlag(elements.rightFlag, data.LeftNat);
+      updateFlag(elements.leftFlag, data.LeftNat);
+      updateFlag(elements.rightFlag, data.RightNat);
 
     }
 
