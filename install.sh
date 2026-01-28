@@ -114,6 +114,9 @@ keyfile /etc/mosquitto/certs/server.key
 tls_version tlsv1.2
 require_certificate false
 allow_anonymous true
+listener 9001
+protocol websockets
+allow_anonymous true
 ##################################################################
 EOF
 else
