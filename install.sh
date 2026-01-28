@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+if [ -z "${BASH_VERSION:-}" ]; then
+  echo "ERROR: This script must be run with bash (not sh)"
+  exit 1
+fi
+
 set -euo pipefail
 
 ### CONFIG #########################################################
