@@ -126,6 +126,66 @@ client.on('connect', () => {
   console.log('Connected to MQTT broker');
 });
 
+
+// === Enrolment / Pairing ===
+const ENROLMENT_CA = '/var/lib/scoring-broker/ca';
+const ENROLMENT_DEVICES = '/var/lib/scoring-broker/devices';
+
+// Add JSON body parsing (required for POST /enrol)
+app.use(express.json());
+
+// Pairing state
+let pairingEnabled = false;
+
+// Enable pairing endpoint (protected by optional PIN)
+app.post('/api/enable-pairing', (req, res) => {
+  // Optional: check PIN from req.body.pin
+  pairingEnabled = true;
+  setTimeout(() => { pairingEnabled = false }, 2 * 60 * 1000); // 2 min
+  console.log('Pairing enabled for 2 minutes');
+  res.send('Pairing enabled for 2 minutes');
+});
+
+// Device enrolment endpoint
+app.post('/api/enrol', (req, res) => {
+  if (!pairingEnabled) return res.status(403).send('Pairing disabled');
+
+  const { deviceId, csrPem } = req.body;
+  if (!deviceId || !csrPem) return res.status(400).send('Missing parameters');
+
+  const csrFile = path.join('/tmp', `${deviceId}.csr`);
+  const certFile = path.join(ENROLMENT_DEVICES, `${deviceId}.crt`);
+
+  try {
+    // Write CSR to temp file
+    fs.writeFileSync(csrFile, csrPem);
+
+    // Sign CSR using CA
+    const { execFileSync } = require('child_process');
+    execFileSync('openssl', [
+      'x509', '-req',
+      '-in', csrFile,
+      '-CA', path.join(ENROLMENT_CA, 'ca.crt'),
+      '-CAkey', path.join(ENROLMENT_CA, 'ca.key'),
+      '-CAcreateserial',
+      '-out', certFile,
+      '-days', '365',
+      '-sha256'
+    ]);
+
+    // Cleanup CSR
+    fs.unlinkSync(csrFile);
+
+    // Return signed certificate
+    const certPem = fs.readFileSync(certFile, 'utf8');
+    res.json({ cert: certPem });
+    console.log(`Device ${deviceId} enrolled successfully`);
+  } catch (err) {
+    console.error('Enrolment error:', err);
+    res.status(500).send('Failed to sign certificate');
+  }
+});
+
 // Start the server
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
