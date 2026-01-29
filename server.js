@@ -3,6 +3,8 @@ const mqtt = require('mqtt');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { execFile } = require('child_process');
+
 const app = express();
 const port = 3000;
 
@@ -147,11 +149,16 @@ app.post('/api/enable-pairing', (req, res) => {
 });
 
 // Device enrolment endpoint
+// Device enrolment endpoint
 app.post('/api/enrol', (req, res) => {
-  if (!pairingEnabled) return res.status(403).send('Pairing disabled');
+  if (!pairingEnabled) {
+    return res.status(403).send('Pairing disabled');
+  }
 
   const { deviceId, csrPem } = req.body;
-  if (!deviceId || !csrPem) return res.status(400).send('Missing parameters');
+  if (!deviceId || !csrPem) {
+    return res.status(400).send('Missing parameters');
+  }
 
   const csrFile = path.join('/tmp', `${deviceId}.csr`);
   const certFile = path.join(ENROLMENT_DEVICES, `${deviceId}.crt`);
@@ -159,32 +166,38 @@ app.post('/api/enrol', (req, res) => {
   try {
     // Write CSR to temp file
     fs.writeFileSync(csrFile, csrPem);
-
-    // Sign CSR using CA
-    const { execFileSync } = require('child_process');
-    execFileSync('openssl', [
-      'x509', '-req',
-      '-in', csrFile,
-      '-CA', path.join(ENROLMENT_CA, 'ca.crt'),
-      '-CAkey', path.join(ENROLMENT_CA, 'ca.key'),
-      '-CAcreateserial',
-      '-out', certFile,
-      '-days', '365',
-      '-sha256'
-    ]);
-
-    // Cleanup CSR
-    fs.unlinkSync(csrFile);
-
-    // Return signed certificate
-    const certPem = fs.readFileSync(certFile, 'utf8');
-    res.json({ cert: certPem });
-    console.log(`Device ${deviceId} enrolled successfully`);
   } catch (err) {
-    console.error('Enrolment error:', err);
-    res.status(500).send('Failed to sign certificate');
+    console.error('Failed to write CSR:', err);
+    return res.status(500).send('Failed to write CSR');
   }
+
+  // Sign CSR using privileged helper
+  execFile(
+    'sudo',
+    ['/usr/local/bin/sign-device-cert.sh', csrFile, certFile],
+    (error, stdout, stderr) => {
+      if (error) {
+        console.error('Signing failed:', stderr || error);
+        return res.status(500).send('Failed to sign certificate');
+      }
+
+      try {
+        // Cleanup CSR
+        fs.unlinkSync(csrFile);
+
+        // Return signed certificate
+        const certPem = fs.readFileSync(certFile, 'utf8');
+        res.json({ cert: certPem });
+
+        console.log(`Device ${deviceId} enrolled successfully`);
+      } catch (err) {
+        console.error('Post-signing error:', err);
+        res.status(500).send('Failed after signing');
+      }
+    }
+  );
 });
+
 
 // Start the server
 app.listen(port, () => {
