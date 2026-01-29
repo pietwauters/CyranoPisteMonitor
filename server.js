@@ -8,6 +8,21 @@ const { execFile } = require('child_process');
 const app = express();
 const port = 3000;
 
+const PAIRING_FILE = '/var/lib/scoring-broker/pairing.json';
+
+function isPairingEnabled() {
+  try {
+    const data = JSON.parse(fs.readFileSync(PAIRING_FILE, 'utf8'));
+    if (!data.enabled) return false;
+
+    const now = Math.floor(Date.now() / 1000);
+    return data.expiresAt > now;
+  } catch {
+    return false;
+  }
+}
+
+
 // Configure multer for file uploads - use memory storage first
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -140,18 +155,22 @@ app.use(express.json());
 let pairingEnabled = false;
 
 // Enable pairing endpoint (protected by optional PIN)
-app.post('/api/enable-pairing', (req, res) => {
-  // Optional: check PIN from req.body.pin
-  pairingEnabled = true;
-  setTimeout(() => { pairingEnabled = false }, 2 * 60 * 1000); // 2 min
-  console.log('Pairing enabled for 2 minutes');
-  res.send('Pairing enabled for 2 minutes');
+app.post('/api/pairing/enable', (req, res) => {
+  const { execFile } = require('child_process');
+
+  execFile('/usr/local/bin/enable-pairing.sh', (err) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).send('Failed to enable pairing');
+    }
+    res.send('Pairing enabled for 2 minutes');
+  });
 });
 
-// Device enrolment endpoint
+
 // Device enrolment endpoint
 app.post('/api/enrol', (req, res) => {
-  if (!pairingEnabled) {
+   if (!isPairingEnabled()) {
     return res.status(403).send('Pairing disabled');
   }
 
