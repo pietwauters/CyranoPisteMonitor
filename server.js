@@ -145,8 +145,11 @@ client.on('connect', () => {
 
 
 // === Enrolment / Pairing ===
-const ENROLMENT_CA = '/var/lib/scoring-broker/ca';
-const ENROLMENT_DEVICES = '/var/lib/scoring-broker/devices';
+//const ENROLMENT_CA = '/var/lib/scoring-broker/ca';
+//const ENROLMENT_DEVICES = '/var/lib/scoring-broker/devices';
+const ENROLMENT_CA = '/home/atlas/scoring-broker/ca';
+const ENROLMENT_DEVICES = '/home/atlas/scoring-broker/devices';
+
 
 // Add JSON body parsing (required for POST /enrol)
 app.use(express.json());
