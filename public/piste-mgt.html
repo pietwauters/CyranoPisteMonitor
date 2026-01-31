@@ -541,6 +541,8 @@
         // Connect to MQTT using Paho
         function connectMQTT() {
             try {
+                // Use wss:// (secure websocket) when page is loaded via https://
+                const useSSL = location.protocol === 'https:';
                 client = new Paho.MQTT.Client(location.hostname, 9001, "pisteMgt_" + Date.now());
 
                 client.onConnectionLost = (responseObject) => {
@@ -552,6 +554,7 @@
                 };
 
                 client.connect({
+                    useSSL: useSSL,
                     onSuccess: () => {
                         console.log('Connected to MQTT broker');
                         updateStatus('connected');

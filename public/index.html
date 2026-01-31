@@ -452,6 +452,9 @@
         pisteSelect.appendChild(option);
       }
 
+      // Use wss:// (secure websocket) when page is loaded via https://
+      const useSSL = location.protocol === 'https:';
+
       // If loaded via direct URL, hide controls and auto-subscribe
       if (urlPiste) {
         pisteSelect.style.display = 'none';
@@ -462,6 +465,7 @@
         currentPiste = urlPiste;
         pisteSelect.value = urlPiste;
         client.connect({
+          useSSL: useSSL,
           onSuccess: () => {
             client.subscribe(`MQTT_Cyrano/Piste_${currentPiste}/#`);
             document.querySelector('.poolNum').textContent = `Strip_${currentPiste}`;
@@ -472,6 +476,7 @@
       } else {
         // Normal mode - connect but wait for user to select piste
         client.connect({
+          useSSL: useSSL,
           onSuccess: () => console.log("Connected to MQTT broker"),
           onFailure: (err) => console.error("Connection failed:", err)
         });
