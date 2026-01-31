@@ -418,7 +418,10 @@
   <script src="/js/mqttws31.min.js"></script>
   <script>
     let currentPiste = "";
-    const client = new Paho.MQTT.Client(location.hostname, 9001, "fencingDisplay_" + Date.now());
+    // Use wss:// (secure websocket) when page is loaded via https://
+    const useSSL = location.protocol === 'https:';
+    const port = useSSL ? 9002 : 9001;  // Use port 9002 for wss, 9001 for ws
+    const client = new Paho.MQTT.Client(location.hostname, port, "fencingDisplay_" + Date.now());
 
     // Check if loaded via direct piste URL
     function getPisteFromURL() {
@@ -451,9 +454,6 @@
         option.text = `Piste ${option.value}`;
         pisteSelect.appendChild(option);
       }
-
-      // Use wss:// (secure websocket) when page is loaded via https://
-      const useSSL = location.protocol === 'https:';
 
       // If loaded via direct URL, hide controls and auto-subscribe
       if (urlPiste) {

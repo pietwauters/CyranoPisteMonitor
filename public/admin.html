@@ -237,7 +237,7 @@
         const subscriptions = new Map();
 
         // Connect to MQTT using Paho
-        function connectMQTT(hostname = location.hostname, port = 9001) {
+        function connectMQTT(hostname = location.hostname, port = null) {
             if (client && client.isConnected()) {
                 client.disconnect();
             }
@@ -245,6 +245,10 @@
             try {
                 // Use wss:// (secure websocket) when page is loaded via https://
                 const useSSL = location.protocol === 'https:';
+                // Auto-select port if not specified: 9002 for wss, 9001 for ws
+                if (port === null) {
+                    port = useSSL ? 9002 : 9001;
+                }
                 client = new Paho.MQTT.Client(hostname, port, "adminPanel_" + Date.now());
 
                 client.onConnectionLost = (responseObject) => {
