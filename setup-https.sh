@@ -26,8 +26,22 @@ else
 fi
 
 # Restart the service
-echo "Restarting mqtt-web service..."
-sudo systemctl restart mqtt-web.service
+echo "Restarting mqtt-web..."
+
+# Check if running under PM2
+if command -v pm2 &> /dev/null && pm2 list | grep -q "mqtt-web"; then
+    echo "Found PM2 process, restarting..."
+    pm2 restart mqtt-web
+elif systemctl is-active --quiet mqtt-web.service 2>/dev/null; then
+    echo "Found systemd service, restarting..."
+    sudo systemctl restart mqtt-web.service
+else
+    echo "Warning: Could not find running service."
+    echo "You may need to manually restart the server with:"
+    echo "  pm2 restart mqtt-web"
+    echo "  OR"
+    echo "  sudo systemctl restart mqtt-web.service"
+fi
 
 echo ""
 echo "=== HTTPS Setup Complete ==="
