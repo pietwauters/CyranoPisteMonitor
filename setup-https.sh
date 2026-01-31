@@ -6,6 +6,12 @@ set -e
 
 echo "=== Setting up HTTPS for mqtt-web ==="
 
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR"
+
+echo "Working directory: $SCRIPT_DIR"
+
 # Get server's IP address
 SERVER_IP=$(hostname -I | awk '{print $1}')
 echo "Server IP: $SERVER_IP"
@@ -20,7 +26,7 @@ if [ ! -f "server.key" ] || [ ! -f "server.cert" ]; then
     chmod 600 server.key
     chmod 644 server.cert
     
-    echo "✓ SSL certificate generated"
+    echo "✓ SSL certificate generated at $SCRIPT_DIR"
 else
     echo "✓ SSL certificate already exists"
 fi
