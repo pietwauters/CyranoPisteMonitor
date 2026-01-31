@@ -299,6 +299,120 @@
             background: #666;
             cursor: not-allowed;
         }
+
+        .camera-btn {
+            background: #9C27B0;
+            margin-top: 10px;
+        }
+
+        .camera-btn:hover {
+            background: #7B1FA2;
+        }
+
+        .camera-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        .camera-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .camera-modal.active {
+            display: flex;
+        }
+
+        .camera-container {
+            background: #2a2a2a;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 90%;
+            max-height: 90%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .camera-container h2 {
+            color: #9C27B0;
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+
+        .camera-video-container {
+            position: relative;
+            width: 640px;
+            max-width: 100%;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .camera-video {
+            width: 100%;
+            height: auto;
+            display: block;
+            transform: scaleX(-1);
+        }
+
+        .camera-canvas {
+            display: none;
+        }
+
+        .camera-controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .camera-controls button {
+            width: auto;
+            min-width: 150px;
+            padding: 12px 25px;
+        }
+
+        .capture-btn {
+            background: #4CAF50;
+        }
+
+        .capture-btn:hover {
+            background: #45a049;
+        }
+
+        .cancel-camera-btn {
+            background: #f44336;
+        }
+
+        .cancel-camera-btn:hover {
+            background: #d32f2f;
+        }
+
+        .camera-status {
+            color: #888;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .camera-video-container {
+                width: 100%;
+            }
+
+            .camera-container {
+                padding: 20px;
+            }
+        }
     </style>
 </head>
 
@@ -343,6 +457,7 @@
                             <input type="file" id="left-photo" accept="image/*">
                             <label for="left-photo" class="file-input-label">Choose Photo</label>
                         </div>
+                        <button class="camera-btn" onclick="openCamera('left')">📷 Take Photo with Camera</button>
                         <div class="zoom-controls">
                             <label>Zoom:</label>
                             <input type="range" class="zoom-slider" id="left-zoom" min="100" max="300" value="100"
@@ -379,6 +494,7 @@
                             <input type="file" id="right-photo" accept="image/*">
                             <label for="right-photo" class="file-input-label">Choose Photo</label>
                         </div>
+                        <button class="camera-btn" onclick="openCamera('right')">📷 Take Photo with Camera</button>
                         <div class="zoom-controls">
                             <label>Zoom:</label>
                             <input type="range" class="zoom-slider" id="right-zoom" min="100" max="300" value="100"
@@ -400,6 +516,22 @@
         </div>
 
         <div id="status-message" class="status"></div>
+    </div>
+
+    <!-- Camera Modal -->
+    <div id="camera-modal" class="camera-modal">
+        <div class="camera-container">
+            <h2>Take Photo</h2>
+            <div class="camera-video-container">
+                <video id="camera-video" class="camera-video" autoplay playsinline></video>
+            </div>
+            <canvas id="camera-canvas" class="camera-canvas"></canvas>
+            <div class="camera-status" id="camera-status">Initializing camera...</div>
+            <div class="camera-controls">
+                <button class="capture-btn" onclick="capturePhoto()" id="capture-btn" disabled>Capture Photo</button>
+                <button class="cancel-camera-btn" onclick="closeCamera()">Cancel</button>
+            </div>
+        </div>
     </div>
 
     <script src="/js/mqttws31.min.js"></script>
@@ -800,6 +932,122 @@
                 showMessage('Remove failed: ' + error.message, 'error');
             }
         }
+
+        // Camera functionality
+        let cameraStream = null;
+        let currentCameraPosition = null;
+
+        async function openCamera(position) {
+            currentCameraPosition = position;
+            const modal = document.getElementById('camera-modal');
+            const video = document.getElementById('camera-video');
+            const statusEl = document.getElementById('camera-status');
+            const captureBtn = document.getElementById('capture-btn');
+
+            modal.classList.add('active');
+            statusEl.textContent = 'Requesting camera access...';
+            captureBtn.disabled = true;
+
+            try {
+                // Request camera access
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        facingMode: 'user'
+                    },
+                    audio: false
+                });
+
+                video.srcObject = cameraStream;
+
+                // Wait for video to be ready
+                video.onloadedmetadata = () => {
+                    statusEl.textContent = 'Camera ready - Position yourself and click Capture';
+                    captureBtn.disabled = false;
+                };
+
+            } catch (error) {
+                console.error('Camera access error:', error);
+                statusEl.textContent = 'Camera access denied or unavailable';
+                showMessage('Unable to access camera: ' + error.message, 'error');
+            }
+        }
+
+        function closeCamera() {
+            const modal = document.getElementById('camera-modal');
+            const video = document.getElementById('camera-video');
+            const statusEl = document.getElementById('camera-status');
+            const captureBtn = document.getElementById('capture-btn');
+
+            // Stop camera stream
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+
+            video.srcObject = null;
+            modal.classList.remove('active');
+            statusEl.textContent = 'Initializing camera...';
+            captureBtn.disabled = true;
+            currentCameraPosition = null;
+        }
+
+        function capturePhoto() {
+            if (!currentCameraPosition) {
+                showMessage('No position selected', 'error');
+                return;
+            }
+
+            const video = document.getElementById('camera-video');
+            const canvas = document.getElementById('camera-canvas');
+            const ctx = canvas.getContext('2d');
+
+            // Set canvas size to video dimensions
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // Draw video frame to canvas (flip horizontally to match preview)
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+            // Convert canvas to blob
+            canvas.toBlob((blob) => {
+                if (!blob) {
+                    showMessage('Failed to capture photo', 'error');
+                    return;
+                }
+
+                // Create a File object from the blob
+                const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+
+                // Create a DataTransfer to set the file input
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+
+                // Set the file input
+                const fileInput = document.getElementById(`${currentCameraPosition}-photo`);
+                fileInput.files = dataTransfer.files;
+
+                // Trigger the change event to update preview
+                const event = new Event('change', { bubbles: true });
+                fileInput.dispatchEvent(event);
+
+                // Close camera modal
+                closeCamera();
+                showMessage('Photo captured successfully', 'success');
+
+            }, 'image/jpeg', 0.9);
+        }
+
+        // Close camera modal when clicking outside the container
+        document.getElementById('camera-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'camera-modal') {
+                closeCamera();
+            }
+        });
 
         setupPhotoInput('left');
         setupPhotoInput('right');
