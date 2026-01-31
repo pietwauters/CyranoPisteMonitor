@@ -1,4 +1,5 @@
 const express = require('express');
+const https = require('https');
 const mqtt = require('mqtt');
 const multer = require('multer');
 const path = require('path');
@@ -7,6 +8,12 @@ const { execFile } = require('child_process');
 
 const app = express();
 const port = 3000;
+
+// Load SSL certificate
+const sslOptions = {
+  key: fs.readFileSync(path.join(__dirname, 'server.key')),
+  cert: fs.readFileSync(path.join(__dirname, 'server.cert'))
+};
 
 const PAIRING_FILE = '/var/lib/scoring-broker/pairing.json';
 
@@ -221,7 +228,8 @@ app.post('/api/enrol', (req, res) => {
 });
 
 
-// Start the server
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+// Start the HTTPS server
+https.createServer(sslOptions, app).listen(port, () => {
+  console.log(`Server running at https://localhost:${port}`);
+  console.log(`Also accessible at https://10.154.1.102:${port}`);
 });

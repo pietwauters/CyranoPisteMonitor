@@ -28,3 +28,7 @@ Thumbs.db
 # Logs
 logs/
 *.log
+
+# SSL certificates (generate on each server)
+server.key
+server.cert
