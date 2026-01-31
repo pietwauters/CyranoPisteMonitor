@@ -398,6 +398,14 @@
             background: #d32f2f;
         }
 
+        .switch-camera-btn {
+            background: #FF9800;
+        }
+
+        .switch-camera-btn:hover {
+            background: #F57C00;
+        }
+
         .camera-status {
             color: #888;
             margin-top: 10px;
@@ -529,6 +537,7 @@
             <div class="camera-status" id="camera-status">Initializing camera...</div>
             <div class="camera-controls">
                 <button class="capture-btn" onclick="capturePhoto()" id="capture-btn" disabled>Capture Photo</button>
+                <button class="switch-camera-btn" onclick="switchCamera()" id="switch-camera-btn" disabled>🔄 Switch Camera</button>
                 <button class="cancel-camera-btn" onclick="closeCamera()">Cancel</button>
             </div>
         </div>
@@ -940,25 +949,41 @@
         // Camera functionality
         let cameraStream = null;
         let currentCameraPosition = null;
+        let facingMode = 'user';  // Start with front camera
 
         async function openCamera(position) {
             currentCameraPosition = position;
             const modal = document.getElementById('camera-modal');
-            const video = document.getElementById('camera-video');
             const statusEl = document.getElementById('camera-status');
             const captureBtn = document.getElementById('capture-btn');
+            const switchBtn = document.getElementById('switch-camera-btn');
 
             modal.classList.add('active');
             statusEl.textContent = 'Requesting camera access...';
             captureBtn.disabled = true;
+            switchBtn.disabled = true;
+
+            await startCamera();
+        }
+
+        async function startCamera() {
+            const video = document.getElementById('camera-video');
+            const statusEl = document.getElementById('camera-status');
+            const captureBtn = document.getElementById('capture-btn');
+            const switchBtn = document.getElementById('switch-camera-btn');
 
             try {
+                // Stop existing stream if any
+                if (cameraStream) {
+                    cameraStream.getTracks().forEach(track => track.stop());
+                }
+
                 // Request camera access
                 cameraStream = await navigator.mediaDevices.getUserMedia({
                     video: {
                         width: { ideal: 1280 },
                         height: { ideal: 720 },
-                        facingMode: 'user'
+                        facingMode: facingMode
                     },
                     audio: false
                 });
@@ -967,8 +992,10 @@
 
                 // Wait for video to be ready
                 video.onloadedmetadata = () => {
-                    statusEl.textContent = 'Camera ready - Position yourself and click Capture';
+                    const cameraType = facingMode === 'user' ? 'Front' : 'Back';
+                    statusEl.textContent = `${cameraType} camera ready - Position yourself and click Capture`;
                     captureBtn.disabled = false;
+                    switchBtn.disabled = false;
                 };
 
             } catch (error) {
@@ -978,11 +1005,18 @@
             }
         }
 
+        async function switchCamera() {
+            // Toggle between front and back camera
+            facingMode = facingMode === 'user' ? 'environment' : 'user';
+            await startCamera();
+        }
+
         function closeCamera() {
             const modal = document.getElementById('camera-modal');
             const video = document.getElementById('camera-video');
             const statusEl = document.getElementById('camera-status');
             const captureBtn = document.getElementById('capture-btn');
+            const switchBtn = document.getElementById('switch-camera-btn');
 
             // Stop camera stream
             if (cameraStream) {
@@ -994,7 +1028,9 @@
             modal.classList.remove('active');
             statusEl.textContent = 'Initializing camera...';
             captureBtn.disabled = true;
+            switchBtn.disabled = true;
             currentCameraPosition = null;
+            facingMode = 'user';  // Reset to front camera
         }
 
         function capturePhoto() {
