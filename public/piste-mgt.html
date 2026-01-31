@@ -187,6 +187,9 @@
             overflow: hidden;
             background: #222;
             cursor: move;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         .photo-preview img {
@@ -766,6 +769,7 @@
 
             if (!img) return;
 
+            // Mouse events
             img.addEventListener('mousedown', (e) => {
                 e.preventDefault();
                 imageState[position].isDragging = true;
@@ -788,6 +792,34 @@
                     const img = preview.querySelector('img');
                     if (img) img.style.cursor = 'move';
                 }
+            });
+
+            // Touch events for mobile
+            img.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                imageState[position].isDragging = true;
+                imageState[position].startX = touch.clientX - imageState[position].offsetX;
+                imageState[position].startY = touch.clientY - imageState[position].offsetY;
+            }, { passive: false });
+
+            img.addEventListener('touchmove', (e) => {
+                if (imageState[position].isDragging) {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    imageState[position].offsetX = touch.clientX - imageState[position].startX;
+                    imageState[position].offsetY = touch.clientY - imageState[position].startY;
+                    updatePreview(position);
+                }
+            }, { passive: false });
+
+            img.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                imageState[position].isDragging = false;
+            }, { passive: false });
+
+            img.addEventListener('touchcancel', (e) => {
+                imageState[position].isDragging = false;
             });
         }
 
