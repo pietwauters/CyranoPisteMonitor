@@ -364,7 +364,6 @@
             width: 100%;
             height: auto;
             display: block;
-            transform: scaleX(-1);
         }
 
         .camera-canvas {
@@ -1022,6 +1021,13 @@
 
                 video.srcObject = cameraStream;
 
+                // Mirror video only for front camera (selfie mode)
+                if (facingMode === 'user') {
+                    video.style.transform = 'scaleX(-1)';
+                } else {
+                    video.style.transform = 'scaleX(1)';
+                }
+
                 // Wait for video to be ready
                 video.onloadedmetadata = () => {
                     const cameraType = facingMode === 'user' ? 'Front' : 'Back';
@@ -1079,9 +1085,12 @@
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
 
-            // Draw video frame to canvas (flip horizontally to match preview)
-            ctx.translate(canvas.width, 0);
-            ctx.scale(-1, 1);
+            // Draw video frame to canvas
+            // Only flip horizontally for front camera (to match what user saw in preview)
+            if (facingMode === 'user') {
+                ctx.translate(canvas.width, 0);
+                ctx.scale(-1, 1);
+            }
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             ctx.setTransform(1, 0, 0, 1, 0, 0);
 
