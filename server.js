@@ -143,11 +143,35 @@ app.delete('/delete-fencer-image/:pisteNumber/:position', (req, res) => {
 app.use(express.static('public'));
 
 // MQTT Client Configuration
-const mqttBroker = 'mqtt://localhost:1883';
-const client = mqtt.connect(mqttBroker);
+// Prefer secure MQTT (MQTTS) on 8883. If your broker uses plain MQTT on 1883,
+// set the MQTT_BROKER env var or the code will attempt a fallback.
+const mqttBroker = process.env.MQTT_BROKER || 'mqtts://localhost:8883';
+const mqttOptions = {
+  // Allow self-signed certs for local deployments. For production, provide
+  // the CA via `ca: fs.readFileSync('/path/to/ca.crt')` and set
+  // `rejectUnauthorized: true`.
+  rejectUnauthorized: false
+};
+
+let client = mqtt.connect(mqttBroker, mqttOptions);
 
 client.on('connect', () => {
-  console.log('Connected to MQTT broker');
+  console.log('Connected to MQTT broker at', mqttBroker);
+});
+
+client.on('error', (err) => {
+  console.error('MQTT client error:', err && err.message ? err.message : err);
+  // If the initial attempt was MQTTS and was refused, try plain MQTT on 1883 once
+  if (mqttBroker.startsWith('mqtts://')) {
+    const fallback = 'mqtt://localhost:1883';
+    console.log('Attempting fallback to', fallback);
+    try {
+      client.end(true);
+    } catch (e) {}
+    client = mqtt.connect(fallback);
+    client.on('connect', () => console.log('Connected to MQTT broker at', fallback));
+    client.on('error', (e) => console.error('MQTT fallback error:', e && e.message ? e.message : e));
+  }
 });
 
 
