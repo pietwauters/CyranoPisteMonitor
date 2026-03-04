@@ -353,6 +353,21 @@
     .smWhite {
       background: #fff;
     }
+
+    .uw2f-timer {
+      font-size: 3.5vmin;
+      margin-top: 0.5vh;
+      color: #0f0;
+      /* default green */
+    }
+
+    .uw2f-red {
+      color: #f00;
+    }
+
+    .uw2f-green {
+      color: #0f0;
+    }
   </style>
 </head>
 
@@ -395,6 +410,7 @@
       <div class="timer-container">
         <div class="clock smClock">0:00</div>
         <div class="period smPeriod">1</div>
+        <div id="uw2f-timer" class="uw2f-timer" style="display:none"></div>
         <div class="left-priority"></div>
         <div class="right-priority"></div>
       </div>
@@ -531,6 +547,7 @@
       rightPhoto: document.querySelector('.right-photo'),
       leftPhotoImg: document.querySelector('.left-photo img'),
       rightPhotoImg: document.querySelector('.right-photo img')
+      , uw2fTimer: document.getElementById('uw2f-timer')
     };
 
     client.onMessageArrived = (message) => {
@@ -556,6 +573,12 @@
       elements.rightFlag.style.display = 'none';
       elements.leftFlag.src = '';
       elements.rightFlag.src = '';
+      // Reset UW2F timer
+      if (elements.uw2fTimer) {
+        elements.uw2fTimer.textContent = '';
+        elements.uw2fTimer.style.display = 'none';
+        elements.uw2fTimer.classList.remove('uw2f-red', 'uw2f-green');
+      }
       // Reset cards
       Object.values(elements.cards).forEach(card => {
         card.textContent = "";
@@ -580,6 +603,27 @@
       elements.clock.textContent = data.Stopwatch || "0:00";
       elements.period.textContent = data.Round || "1";
 
+      // Update UW2F timer display if present
+      if (elements.uw2fTimer) {
+        const uw = data.UW2F_Timer;
+        if (uw && uw.time) {
+          const timeStr = uw.time.toString();
+          elements.uw2fTimer.textContent = timeStr;
+          // Parse minutes portion of M:SS or MM:SS
+          const parts = timeStr.split(':');
+          const minutes = parts.length >= 2 ? parseInt(parts[0], 10) || 0 : 0;
+          if (minutes >= 1) {
+            elements.uw2fTimer.classList.add('uw2f-red');
+            elements.uw2fTimer.classList.remove('uw2f-green');
+          } else {
+            elements.uw2fTimer.classList.add('uw2f-green');
+            elements.uw2fTimer.classList.remove('uw2f-red');
+          }
+          elements.uw2fTimer.style.display = 'block';
+        } else {
+          elements.uw2fTimer.style.display = 'none';
+        }
+      }
       // Update cards
       updateCard(elements.cards.lRed, data.LRcard);
       updateCard(elements.cards.lYellow, data.LYcard);
