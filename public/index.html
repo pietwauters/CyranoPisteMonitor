@@ -451,7 +451,12 @@
       if (message.destinationName.includes("/FromDevice")) {
         try {
           const data = JSON.parse(message.payloadString);
-          updateDisplay(data);
+          // If this is the new EFP2 protocol, only apply the UW2F_Timer part
+          if (data.Protocol && data.Protocol === 'EFP2') {
+            updateDisplay({ UW2F_Timer: data.UW2F_Timer });
+          } else {
+            updateDisplay(data);
+          }
         } catch (e) {
           console.error("JSON parse error:", e);
         }
@@ -554,7 +559,11 @@
       if (message.destinationName.includes("/FromDevice")) {
         try {
           const data = JSON.parse(message.payloadString);
-          updateDisplay(data);
+          if (data.Protocol && data.Protocol === 'EFP2') {
+            updateDisplay({ UW2F_Timer: data.UW2F_Timer });
+          } else {
+            updateDisplay(data);
+          }
         } catch (e) {
           console.error("JSON parse error:", e);
         }
@@ -593,23 +602,21 @@
     }
 
     function updateDisplay(data) {
-      // Update names and scores
-      elements.leftName.textContent = data.LeftName || "";
-      elements.rightName.textContent = data.RightName || "";
-      elements.leftScore.textContent = data.Lscore || "0";
-      elements.rightScore.textContent = data.Rscore || "0";
+      // Update only fields that are present to avoid flicker
+      if (data.hasOwnProperty('LeftName')) elements.leftName.textContent = data.LeftName || "";
+      if (data.hasOwnProperty('RightName')) elements.rightName.textContent = data.RightName || "";
+      if (data.hasOwnProperty('Lscore')) elements.leftScore.textContent = String(data.Lscore);
+      if (data.hasOwnProperty('Rscore')) elements.rightScore.textContent = String(data.Rscore);
 
-      // Update timer and period
-      elements.clock.textContent = data.Stopwatch || "0:00";
-      elements.period.textContent = data.Round || "1";
+      if (data.hasOwnProperty('Stopwatch')) elements.clock.textContent = data.Stopwatch || "0:00";
+      if (data.hasOwnProperty('Round')) elements.period.textContent = data.Round || "1";
 
-      // Update UW2F timer display if present
-      if (elements.uw2fTimer) {
+      // Update UW2F timer display only when field present
+      if (elements.uw2fTimer && data.hasOwnProperty('UW2F_Timer')) {
         const uw = data.UW2F_Timer;
         if (uw && uw.time) {
           const timeStr = uw.time.toString();
           elements.uw2fTimer.textContent = timeStr;
-          // Parse minutes portion of M:SS or MM:SS
           const parts = timeStr.split(':');
           const minutes = parts.length >= 2 ? parseInt(parts[0], 10) || 0 : 0;
           if (minutes >= 1) {
@@ -621,40 +628,47 @@
           }
           elements.uw2fTimer.style.display = 'block';
         } else {
+          elements.uw2fTimer.textContent = '';
           elements.uw2fTimer.style.display = 'none';
+          elements.uw2fTimer.classList.remove('uw2f-red', 'uw2f-green');
         }
       }
-      // Update cards
-      updateCard(elements.cards.lRed, data.LRcard);
-      updateCard(elements.cards.lYellow, data.LYcard);
-      updateCard(elements.cards.rRed, data.RRcard);
-      updateCard(elements.cards.rYellow, data.RYcard);
 
-      // Update P-Cards
-      updatePCard(elements.cards.lPCard, data['LP-card']);
-      updatePCard(elements.cards.rPCard, data['RP-card']);
+      // Update cards only when values provided
+      if (data.hasOwnProperty('LRcard')) updateCard(elements.cards.lRed, data.LRcard);
+      if (data.hasOwnProperty('LYcard')) updateCard(elements.cards.lYellow, data.LYcard);
+      if (data.hasOwnProperty('RRcard')) updateCard(elements.cards.rRed, data.RRcard);
+      if (data.hasOwnProperty('RYcard')) updateCard(elements.cards.rYellow, data.RYcard);
 
-      // Update lights
-      updateLight(elements.lights.lColor, data.LLight);
-      updateLight(elements.lights.rColor, data.RLight);
-      updateLight(elements.lights.lWhite, data.LWlight);
-      updateLight(elements.lights.rWhite, data.RWlight);
-      // Update priority indicators
-      const priority = data.Priority || '';
-      elements.leftPriority.style.display = 'none';
-      elements.rightPriority.style.display = 'none';
-      elements.leftPriority.textContent = '';
-      elements.rightPriority.textContent = '';
+      // Update P-Cards only when provided
+      if (data.hasOwnProperty('LP-card')) updatePCard(elements.cards.lPCard, data['LP-card']);
+      if (data.hasOwnProperty('RP-card')) updatePCard(elements.cards.rPCard, data['RP-card']);
 
-      if (priority === 'L') {
-        elements.leftPriority.textContent = 'P';
-        elements.leftPriority.style.display = 'block';
-      } else if (priority === 'R') {
-        elements.rightPriority.textContent = 'P';
-        elements.rightPriority.style.display = 'block';
+      // Update lights only when provided
+      if (data.hasOwnProperty('LLight')) updateLight(elements.lights.lColor, data.LLight);
+      if (data.hasOwnProperty('RLight')) updateLight(elements.lights.rColor, data.RLight);
+      if (data.hasOwnProperty('LWlight')) updateLight(elements.lights.lWhite, data.LWlight);
+      if (data.hasOwnProperty('RWlight')) updateLight(elements.lights.rWhite, data.RWlight);
+
+      // Priority only update when present
+      if (data.hasOwnProperty('Priority')) {
+        const priority = data.Priority || '';
+        elements.leftPriority.style.display = 'none';
+        elements.rightPriority.style.display = 'none';
+        elements.leftPriority.textContent = '';
+        elements.rightPriority.textContent = '';
+
+        if (priority === 'L') {
+          elements.leftPriority.textContent = 'P';
+          elements.leftPriority.style.display = 'block';
+        } else if (priority === 'R') {
+          elements.rightPriority.textContent = 'P';
+          elements.rightPriority.style.display = 'block';
+        }
       }
-      updateFlag(elements.leftFlag, data.LeftNat);
-      updateFlag(elements.rightFlag, data.RightNat);
+
+      if (data.hasOwnProperty('LeftNat')) updateFlag(elements.leftFlag, data.LeftNat);
+      if (data.hasOwnProperty('RightNat')) updateFlag(elements.rightFlag, data.RightNat);
 
     }
 
