@@ -636,7 +636,7 @@
           // Apply color rules: green <50s, orange 50-60s, red >60s
           if (totalSeconds < 50) {
             elements.uw2fTimer.classList.add('uw2f-green');
-          } else if (totalSeconds <= 60) {
+          } else if (totalSeconds < 60) {
             elements.uw2fTimer.classList.add('uw2f-orange');
           } else {
             elements.uw2fTimer.classList.add('uw2f-red');
