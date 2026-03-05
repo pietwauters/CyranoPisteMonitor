@@ -355,11 +355,10 @@
     }
 
     .uw2f-timer {
-      font-size: 6vmin;
+      font-size: 8vmin;
       /* match .smPeriod */
-      margin-top: 1vh;
+      margin-top: 3vh;
       /* slightly lower */
-      color: #0f0;
       line-height: 1;
     }
 
@@ -369,6 +368,10 @@
 
     .uw2f-green {
       color: #0f0;
+    }
+
+    .uw2f-orange {
+      color: #ffa500;
     }
   </style>
 </head>
@@ -588,7 +591,7 @@
       if (elements.uw2fTimer) {
         elements.uw2fTimer.textContent = '';
         elements.uw2fTimer.style.display = 'none';
-        elements.uw2fTimer.classList.remove('uw2f-red', 'uw2f-green');
+        elements.uw2fTimer.classList.remove('uw2f-red', 'uw2f-green', 'uw2f-orange');
       }
       // Reset cards
       Object.values(elements.cards).forEach(card => {
@@ -620,19 +623,29 @@
           const timeStr = uw.time.toString();
           elements.uw2fTimer.textContent = timeStr;
           const parts = timeStr.split(':');
-          const minutes = parts.length >= 2 ? parseInt(parts[0], 10) || 0 : 0;
-          if (minutes >= 1) {
-            elements.uw2fTimer.classList.add('uw2f-red');
-            elements.uw2fTimer.classList.remove('uw2f-green');
+          let minutes = 0, seconds = 0;
+          if (parts.length >= 2) {
+            minutes = parseInt(parts[0], 10) || 0;
+            seconds = parseInt(parts[1], 10) || 0;
           } else {
+            seconds = parseInt(parts[0], 10) || 0;
+          }
+          const totalSeconds = minutes * 60 + seconds;
+          // Clear any previous color classes
+          elements.uw2fTimer.classList.remove('uw2f-red', 'uw2f-green', 'uw2f-orange');
+          // Apply color rules: green <50s, orange 50-60s, red >60s
+          if (totalSeconds < 50) {
             elements.uw2fTimer.classList.add('uw2f-green');
-            elements.uw2fTimer.classList.remove('uw2f-red');
+          } else if (totalSeconds <= 60) {
+            elements.uw2fTimer.classList.add('uw2f-orange');
+          } else {
+            elements.uw2fTimer.classList.add('uw2f-red');
           }
           elements.uw2fTimer.style.display = 'block';
         } else {
           elements.uw2fTimer.textContent = '';
           elements.uw2fTimer.style.display = 'none';
-          elements.uw2fTimer.classList.remove('uw2f-red', 'uw2f-green');
+          elements.uw2fTimer.classList.remove('uw2f-red', 'uw2f-green', 'uw2f-orange');
         }
       }
 
