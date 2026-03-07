@@ -69,6 +69,8 @@
       max-width: 2000px;
       max-height: 1000px;
       padding: 2vmin;
+      /* make room for the absolutely-positioned name row at the top */
+      padding-top: calc(2vmin + 10vh);
       box-sizing: border-box;
       aspect-ratio: 16/9;
     }
@@ -99,7 +101,12 @@
       display: flex;
       justify-content: space-between;
       height: 10vh;
-      margin-bottom: 2vh;
+      margin-bottom: 0;
+      position: absolute;
+      top: 2vmin;
+      left: 2vmin;
+      right: 2vmin;
+      z-index: 5;
     }
 
     .smName {
