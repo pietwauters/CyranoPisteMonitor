@@ -9,6 +9,8 @@
     :root {
       /* frame thickness used for all coloured frames */
       --frame-thickness: 0.8vmin;
+      /* card dimensions */
+      --card-height: 4.5vmin;
     }
 
     :fullscreen {
@@ -266,7 +268,8 @@
     /* Cards */
     .card-container {
       position: absolute;
-      bottom: 4vh;
+      /* move up by one card height so cards sit higher */
+      bottom: calc(4vh + var(--card-height));
       width: 100%;
       display: flex;
       justify-content: center;
@@ -275,7 +278,7 @@
 
     .smCard {
       width: 6vmin;
-      height: 4.5vmin;
+      height: var(--card-height);
       border-radius: 0.5vmin;
       display: flex;
       align-items: center;
