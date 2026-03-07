@@ -467,7 +467,21 @@
         }
       }
     };
+    // Helper to normalise piste IDs to 3 digits for display (cosmetic only)
+    function padPisteId(id) {
+      if (id == null) return '';
+      const s = String(id).trim();
+      if (!s) return '';
+      return /^\d+$/.test(s) ? s.padStart(3, '0') : s;
+    }
 
+
+    // Cosmetic: if the incoming EFP1.1 JSON contains a `Piste` field,
+    // show it on the header. This does NOT change subscriptions.
+    if (data && data.hasOwnProperty('Piste')) {
+      const padded = padPisteId(data.Piste);
+      if (padded) elements.poolNum.textContent = `Strip_${padded}`;
+    }
     // Initialize piste selector
     window.onload = function () {
       const pisteSelect = document.getElementById('piste-select');
