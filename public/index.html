@@ -116,6 +116,29 @@
       width: 100%;
     }
 
+    /* Centering inner scoring area so the machine sits in the middle */
+    .scoring-inner {
+      position: relative;
+      width: 100%;
+      max-width: 1400px;
+      height: 100%;
+      margin: 0 auto;
+    }
+
+    /* Make lights spread across available space */
+    .top-row .light-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex: 1 1 auto;
+      padding: 0 1vmin;
+    }
+
+    .top-row h4.poolNum {
+      margin: 0 0 0 1vmin;
+      white-space: nowrap;
+    }
+
     .smName {
       color: white;
       font-size: 8vmin;
@@ -451,41 +474,42 @@
     </div>
 
     <div id="strip_Podium" class="scoringMachine">
-
-      <div class="flag-container">
-        <img class="national-flag left-flag" alt="Left flag">
-        <img class="national-flag right-flag" alt="Right flag">
-      </div>
-
-      <div class="fencer-photos">
-        <div class="fencer-photo left-photo">
-          <img alt="Left fencer">
+      <div class="scoring-inner">
+        <div class="flag-container">
+          <img class="national-flag left-flag" alt="Left flag">
+          <img class="national-flag right-flag" alt="Right flag">
         </div>
-        <div class="fencer-photo right-photo">
-          <img alt="Right fencer">
+
+        <div class="fencer-photos">
+          <div class="fencer-photo left-photo">
+            <img alt="Left fencer">
+          </div>
+          <div class="fencer-photo right-photo">
+            <img alt="Right fencer">
+          </div>
         </div>
-      </div>
 
-      <div class="timer-container">
-        <div class="clock smClock">0:00</div>
-        <div class="period smPeriod">1</div>
-        <div id="uw2f-timer" class="uw2f-timer" style="display:none"></div>
-        <div class="left-priority"></div>
-        <div class="right-priority"></div>
-      </div>
+        <div class="timer-container">
+          <div class="clock smClock">0:00</div>
+          <div class="period smPeriod">1</div>
+          <div id="uw2f-timer" class="uw2f-timer" style="display:none"></div>
+          <div class="left-priority"></div>
+          <div class="right-priority"></div>
+        </div>
 
-      <div class="card-container">
-        <div class="lPCard smCard smPCard">P</div>
-        <div class="lRed smCard smRed"></div>
-        <div class="lYellow smCard smYellow"></div>
-        <div class="rYellow smCard smYellow"></div>
-        <div class="rRed smCard smRed"></div>
-        <div class="rPCard smCard smPCard">P</div>
-      </div>
+        <div class="card-container">
+          <div class="lPCard smCard smPCard">P</div>
+          <div class="lRed smCard smRed"></div>
+          <div class="lYellow smCard smYellow"></div>
+          <div class="rYellow smCard smYellow"></div>
+          <div class="rRed smCard smRed"></div>
+          <div class="rPCard smCard smPCard">P</div>
+        </div>
 
-      <div class="score-container">
-        <div class="lScore smScore">0</div>
-        <div class="rScore smScore">0</div>
+        <div class="score-container">
+          <div class="lScore smScore">0</div>
+          <div class="rScore smScore">0</div>
+        </div>
       </div>
     </div>
   </div>
