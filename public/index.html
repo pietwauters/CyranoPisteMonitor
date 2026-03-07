@@ -11,6 +11,8 @@
       --frame-thickness: 0.8vmin;
       /* card dimensions */
       --card-height: 4.5vmin;
+      /* horizontal inset for fencer names and flags */
+      --name-inner-padding: 3vmin;
     }
 
     :fullscreen {
@@ -159,7 +161,8 @@
       height: 100%;
       display: flex;
       align-items: center;
-      padding: 0 1.5vmin;
+      padding-left: var(--name-inner-padding);
+      padding-right: var(--name-inner-padding);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -186,7 +189,7 @@
     .flag-container {
       display: flex;
       justify-content: space-between;
-      padding: 0 0.5vmin;
+      padding: 0 var(--name-inner-padding);
       margin: 1vmin 0;
       height: 10vmin;
     }
