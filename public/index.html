@@ -373,6 +373,27 @@
     .uw2f-orange {
       color: #ffa500;
     }
+
+    /* Fullscreen frame colours (thin inner frame) */
+    .scoring-container.frame-red {
+      box-shadow: inset 0 0 0 0.6vmin #ff0000;
+    }
+
+    .scoring-container.frame-green {
+      box-shadow: inset 0 0 0 0.6vmin #00ff00;
+    }
+
+    .scoring-container.frame-yellow {
+      box-shadow: inset 0 0 0 0.6vmin #ff0;
+    }
+
+    .scoring-container.frame-blue {
+      box-shadow: inset 0 0 0 0.6vmin #00f;
+    }
+
+    .scoring-container.frame-gold {
+      box-shadow: inset 0 0 0 0.6vmin #d4af37;
+    }
   </style>
 </head>
 
@@ -439,6 +460,8 @@
   <script src="/js/mqttws31.min.js"></script>
   <script>
     let currentPiste = "";
+    // Last displayed raw Piste value from incoming messages (cosmetic only)
+    let displayedPiste = "";
     // Use wss:// (secure websocket) when page is loaded via https://
     const useSSL = location.protocol === 'https:';
     const port = useSSL ? 9002 : 9001;  // Use port 9002 for wss, 9001 for ws
@@ -619,8 +642,12 @@
       // Cosmetic: if the incoming EFP1.1 JSON contains a `Piste` field,
       // show it on the header. This does NOT change subscriptions.
       if (data && data.hasOwnProperty('Piste')) {
-        const padded = padPisteId(data.Piste);
+        // store raw value for frame logic (case-insensitive substring match)
+        displayedPiste = String(data.Piste || '').trim();
+        const padded = padPisteId(displayedPiste);
         if (padded) elements.poolNum.textContent = `Strip_${padded}`;
+        else elements.poolNum.textContent = displayedPiste || elements.poolNum.textContent;
+        applyPisteFrame();
       }
       // Update only fields that are present to avoid flicker
       if (data.hasOwnProperty('LeftName')) elements.leftName.textContent = data.LeftName || "";
@@ -761,6 +788,8 @@
       isFullscreen = true;
       // Add resize handler
       window.addEventListener('resize', handleResize);
+      // Apply frame if current piste requires one
+      applyPisteFrame();
     }
 
     function exitFullscreen() {
@@ -776,7 +805,31 @@
       isFullscreen = false;
       // Remove resize handler
       window.removeEventListener('resize', handleResize);
+      // Remove any frame classes when exiting fullscreen
+      const container = document.querySelector('.scoring-container');
+      if (container) {
+        container.classList.remove('frame-red', 'frame-green', 'frame-yellow', 'frame-blue', 'frame-gold');
+      }
     }
+
+    // Compute and apply a thin coloured frame to the scoring container when in fullscreen.
+    function applyPisteFrame() {
+      const container = document.querySelector('.scoring-container');
+      if (!container) return;
+      // clear existing frame classes
+      container.classList.remove('frame-red', 'frame-green', 'frame-yellow', 'frame-blue', 'frame-gold');
+      if (!document.fullscreenElement) return; // only show frame in fullscreen
+      const s = (displayedPiste || '').toLowerCase();
+      if (!s) return;
+      if (s.includes('podium')) container.classList.add('frame-gold');
+      else if (s.includes('red')) container.classList.add('frame-red');
+      else if (s.includes('green')) container.classList.add('frame-green');
+      else if (s.includes('yellow')) container.classList.add('frame-yellow');
+      else if (s.includes('blue')) container.classList.add('frame-blue');
+    }
+
+    // Keep frame state in sync with browser fullscreen changes
+    document.addEventListener('fullscreenchange', applyPisteFrame);
 
     // Resize handler
     function handleResize() {
