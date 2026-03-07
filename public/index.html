@@ -6,6 +6,11 @@
   <style>
     /* Fullscreen styles */
     /* Fullscreen overrides */
+    :root {
+      /* frame thickness used for all coloured frames */
+      --frame-thickness: 0.8vmin;
+    }
+
     :fullscreen {
       background: #000 !important;
     }
@@ -387,23 +392,23 @@
     }
 
     .scoring-container.frame-red::after {
-      box-shadow: inset 0 0 0 0.6vmin #ff0000;
+      box-shadow: inset 0 0 0 var(--frame-thickness) #ff0000;
     }
 
     .scoring-container.frame-green::after {
-      box-shadow: inset 0 0 0 0.6vmin #00ff00;
+      box-shadow: inset 0 0 0 var(--frame-thickness) #00ff00;
     }
 
     .scoring-container.frame-yellow::after {
-      box-shadow: inset 0 0 0 0.6vmin #ff0;
+      box-shadow: inset 0 0 0 var(--frame-thickness) #ff0;
     }
 
     .scoring-container.frame-blue::after {
-      box-shadow: inset 0 0 0 0.6vmin #00f;
+      box-shadow: inset 0 0 0 var(--frame-thickness) #00f;
     }
 
     .scoring-container.frame-gold::after {
-      box-shadow: inset 0 0 0 0.6vmin #d4af37;
+      box-shadow: inset 0 0 0 var(--frame-thickness) #d4af37;
     }
   </style>
 </head>
@@ -415,13 +420,14 @@
   </select>
 
   <div class="scoring-container">
+    <div class="name-container">
+      <div class="lName smName"></div>
+      <div class="rName smName"></div>
+    </div>
+
     <h4 class="poolNum">Strip Podium</h4>
 
     <div id="strip_Podium" class="scoringMachine">
-      <div class="name-container">
-        <div class="lName smName"></div>
-        <div class="rName smName"></div>
-      </div>
 
       <div class="light-container">
         <div class="lColor smLamp smRed"></div>
