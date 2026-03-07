@@ -476,12 +476,7 @@
     }
 
 
-    // Cosmetic: if the incoming EFP1.1 JSON contains a `Piste` field,
-    // show it on the header. This does NOT change subscriptions.
-    if (data && data.hasOwnProperty('Piste')) {
-      const padded = padPisteId(data.Piste);
-      if (padded) elements.poolNum.textContent = `Strip_${padded}`;
-    }
+
     // Initialize piste selector
     window.onload = function () {
       const pisteSelect = document.getElementById('piste-select');
@@ -621,6 +616,12 @@
     }
 
     function updateDisplay(data) {
+      // Cosmetic: if the incoming EFP1.1 JSON contains a `Piste` field,
+      // show it on the header. This does NOT change subscriptions.
+      if (data && data.hasOwnProperty('Piste')) {
+        const padded = padPisteId(data.Piste);
+        if (padded) elements.poolNum.textContent = `Strip_${padded}`;
+      }
       // Update only fields that are present to avoid flicker
       if (data.hasOwnProperty('LeftName')) elements.leftName.textContent = data.LeftName || "";
       if (data.hasOwnProperty('RightName')) elements.rightName.textContent = data.RightName || "";
