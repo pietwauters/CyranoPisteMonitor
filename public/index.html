@@ -125,18 +125,28 @@
       margin: 0 auto;
     }
 
-    /* Make lights spread across available space */
-    .top-row .light-container {
+    /* Layout for top-row: left lights, centered pool name, right lights */
+    .top-row .left-lights,
+    .top-row .right-lights {
       display: flex;
-      justify-content: space-between;
+      gap: 1vmin;
       align-items: center;
       flex: 1 1 auto;
-      padding: 0 1vmin;
+    }
+
+    .top-row .left-lights {
+      justify-content: flex-start;
+    }
+
+    .top-row .right-lights {
+      justify-content: flex-end;
     }
 
     .top-row h4.poolNum {
-      margin: 0 0 0 1vmin;
+      flex: 0 0 auto;
+      margin: 0 1vmin;
       white-space: nowrap;
+      text-align: center;
     }
 
     .smName {
@@ -464,13 +474,15 @@
     </div>
 
     <div class="top-row">
-      <div class="light-container">
+      <div class="left-lights">
         <div class="lColor smLamp smRed"></div>
         <div class="lWhite smLamp smWhite"></div>
+      </div>
+      <h4 class="poolNum">Strip Podium</h4>
+      <div class="right-lights">
         <div class="rWhite smLamp smWhite"></div>
         <div class="rColor smLamp smGreen"></div>
       </div>
-      <h4 class="poolNum">Strip Podium</h4>
     </div>
 
     <div id="strip_Podium" class="scoringMachine">
