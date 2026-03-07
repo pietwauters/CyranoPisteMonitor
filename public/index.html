@@ -69,11 +69,10 @@
       max-width: 2000px;
       max-height: 1000px;
       padding: 2vmin;
-      /* keep normal padding; reserve space for the absolutely-positioned name/header
-        by pushing the main scoringMachine down with margin instead */
-      padding-top: 2vmin;
       box-sizing: border-box;
       aspect-ratio: 16/9;
+      display: flex;
+      flex-direction: column;
     }
 
     /* Typography */
@@ -94,8 +93,9 @@
     /* Scoring machine layout */
     .scoringMachine {
       position: relative;
-      height: calc(100% - 8vh);
-      margin-top: calc(2vmin + 10vh);
+      flex: 1 1 auto;
+      min-height: 0;
+      display: block;
     }
 
     /* Name containers */
@@ -103,18 +103,24 @@
       display: flex;
       justify-content: space-between;
       height: 10vh;
-      margin-bottom: 0;
-      position: absolute;
-      top: 2vmin;
-      left: 2vmin;
-      right: 2vmin;
-      z-index: 5;
+      margin: 0 0 1vh 0;
+      width: calc(100% + 4vmin);
+      margin-left: -2vmin;
+    }
+
+    .top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1vmin;
+      width: 100%;
     }
 
     .smName {
       color: white;
       font-size: 8vmin;
-      width: 48%;
+      width: 50%;
+      box-sizing: border-box;
       height: 100%;
       display: flex;
       align-items: center;
@@ -434,16 +440,17 @@
       <div class="rName smName"></div>
     </div>
 
-    <h4 class="poolNum">Strip Podium</h4>
-
-    <div id="strip_Podium" class="scoringMachine">
-
+    <div class="top-row">
       <div class="light-container">
         <div class="lColor smLamp smRed"></div>
         <div class="lWhite smLamp smWhite"></div>
         <div class="rWhite smLamp smWhite"></div>
         <div class="rColor smLamp smGreen"></div>
       </div>
+      <h4 class="poolNum">Strip Podium</h4>
+    </div>
+
+    <div id="strip_Podium" class="scoringMachine">
 
       <div class="flag-container">
         <img class="national-flag left-flag" alt="Left flag">
