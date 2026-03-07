@@ -10,6 +10,13 @@
       background: #000 !important;
     }
 
+    // Helper to normalise piste IDs to 3 digits for display (cosmetic only)
+    function padPisteId(id) {
+      if (id===undefined || id===null) return '';
+      const s=String(id).trim();
+      return s ? s.padStart(3, '0'): '';
+    }
+
     :fullscreen .scoring-container {
       width: 100vw !important;
       height: 100vh !important;
@@ -607,6 +614,12 @@
     }
 
     function updateDisplay(data) {
+      // Display Piste from incoming message (cosmetic only).
+      // This does not change subscriptions; it only updates the on-screen label.
+      if (data.hasOwnProperty('Piste')) {
+        const padded = padPisteId(data.Piste);
+        if (padded) elements.poolNum.textContent = `Strip_${padded}`;
+      }
       // Update only fields that are present to avoid flicker
       if (data.hasOwnProperty('LeftName')) elements.leftName.textContent = data.LeftName || "";
       if (data.hasOwnProperty('RightName')) elements.rightName.textContent = data.RightName || "";
