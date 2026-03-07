@@ -69,8 +69,9 @@
       max-width: 2000px;
       max-height: 1000px;
       padding: 2vmin;
-      /* make room for the absolutely-positioned name row at the top */
-      padding-top: calc(2vmin + 10vh);
+      /* keep normal padding; reserve space for the absolutely-positioned name/header
+        by pushing the main scoringMachine down with margin instead */
+      padding-top: 2vmin;
       box-sizing: border-box;
       aspect-ratio: 16/9;
     }
@@ -94,6 +95,7 @@
     .scoringMachine {
       position: relative;
       height: calc(100% - 8vh);
+      margin-top: calc(2vmin + 10vh);
     }
 
     /* Name containers */
