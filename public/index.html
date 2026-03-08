@@ -127,6 +127,8 @@
       max-width: 1400px;
       height: 100%;
       margin: 0 auto;
+      padding: 0 var(--frame-thickness);
+      box-sizing: border-box;
     }
 
     /* Layout for top-row: left lights, centered pool name, right lights */
@@ -189,7 +191,7 @@
     .flag-container {
       display: flex;
       justify-content: space-between;
-      padding: 0 var(--frame-thickness);
+      padding: 0;
       margin: 1vmin 0;
       height: 10vmin;
     }
@@ -338,7 +340,7 @@
       width: 100%;
       display: flex;
       justify-content: space-between;
-      padding: 0 var(--frame-thickness);
+      padding: 0;
       box-sizing: border-box;
     }
 
@@ -346,7 +348,14 @@
       color: white;
       font-size: 18vmin;
       min-width: 25vmin;
-      text-align: center;
+    }
+
+    .lScore {
+      text-align: left;
+    }
+
+    .rScore {
+      text-align: right;
     }
 
     /* Priority indicators */
