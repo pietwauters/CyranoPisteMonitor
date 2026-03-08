@@ -443,10 +443,6 @@
                 <label for="piste-number">Piste Number:</label>
                 <input type="text" id="piste-number" placeholder="001" maxlength="3">
                 <div class="info-text">Enter 3-digit piste number (e.g., 001, 012, 123)</div>
-                <div id="piste-name-notice"
-                    style="display:none; margin-top:8px; padding:8px 12px; background:#5a3e00; border:1px solid #f90; border-radius:4px; font-size:14px; color:#ffd54f;">
-                    ⚠️ Device reports Piste name: <strong id="piste-name-value"></strong>
-                </div>
             </div>
 
             <div class="form-row">
@@ -543,8 +539,7 @@
             <div class="camera-status" id="camera-status">Initializing camera...</div>
             <div class="camera-controls">
                 <button class="capture-btn" onclick="capturePhoto()" id="capture-btn" disabled>Capture Photo</button>
-                <button class="switch-camera-btn" onclick="switchCamera()" id="switch-camera-btn" disabled>🔄 Switch
-                    Camera</button>
+                <button class="switch-camera-btn" onclick="switchCamera()" id="switch-camera-btn" disabled>🔄 Switch Camera</button>
                 <button class="cancel-camera-btn" onclick="closeCamera()">Cancel</button>
             </div>
         </div>
@@ -553,23 +548,6 @@
     <script src="/js/mqttws31.min.js"></script>
     <script>
         let client;
-        let subscribedPiste = null; // piste number we are currently subscribed to
-        let lastPisteCheck = 0;    // timestamp of last message processed (throttle)
-
-        // Subscribe to FromDevice topic for the given piste and unsubscribe old one
-        function watchPiste(pisteNumber) {
-            if (!client || !client.isConnected()) return;
-            const topic = `MQTT_Cyrano/Piste_${pisteNumber}/FromDevice`;
-            if (subscribedPiste && subscribedPiste !== pisteNumber) {
-                client.unsubscribe(`MQTT_Cyrano/Piste_${subscribedPiste}/FromDevice`);
-            }
-            if (subscribedPiste !== pisteNumber) {
-                client.subscribe(topic);
-                subscribedPiste = pisteNumber;
-            }
-            // Clear any previous notice when switching piste
-            document.getElementById('piste-name-notice').style.display = 'none';
-        }
 
         // Connect to MQTT using Paho
         function connectMQTT() {
@@ -583,33 +561,8 @@
                     if (responseObject.errorCode !== 0) {
                         console.log("Connection lost: " + responseObject.errorMessage);
                         updateStatus('disconnected');
-                        subscribedPiste = null;
                         showMessage('Connection lost: ' + responseObject.errorMessage, 'error');
                     }
-                };
-
-                client.onMessageArrived = (message) => {
-                    if (!message.destinationName.includes('/FromDevice')) return;
-                    // Throttle: only check the Piste name once per second
-                    const now = Date.now();
-                    if (now - lastPisteCheck < 1000) return;
-                    lastPisteCheck = now;
-                    try {
-                        const data = JSON.parse(message.payloadString);
-                        if (!data.hasOwnProperty('Piste')) return;
-                        const enteredPiste = (document.getElementById('piste-number').value.trim() || '').padStart(3, '0');
-                        const devicePiste = String(data.Piste).trim();
-                        // Normalise both sides: pad entered number; pad device value if numeric
-                        const normDevice = /^\d+$/.test(devicePiste) ? devicePiste.padStart(3, '0') : devicePiste;
-                        const notice = document.getElementById('piste-name-notice');
-                        const noticeVal = document.getElementById('piste-name-value');
-                        if (normDevice !== enteredPiste) {
-                            noticeVal.textContent = devicePiste;
-                            notice.style.display = 'block';
-                        } else {
-                            notice.style.display = 'none';
-                        }
-                    } catch (e) { /* ignore parse errors */ }
                 };
 
                 client.connect({
@@ -618,9 +571,6 @@
                         console.log('Connected to MQTT broker');
                         updateStatus('connected');
                         showMessage('Connected to MQTT broker', 'success');
-                        // Subscribe to any piste number already entered
-                        const val = document.getElementById('piste-number').value.trim().padStart(3, '0');
-                        if (/^\d{3}$/.test(val)) watchPiste(val);
                     },
                     onFailure: (err) => {
                         console.error('Connection failed:', err);
@@ -754,14 +704,6 @@
             document.getElementById('right-nationality').value = '';
             showMessage('Form cleared', 'success');
         }
-
-        // Watch the piste FromDevice topic whenever the piste number changes
-        document.getElementById('piste-number').addEventListener('input', (e) => {
-            const val = e.target.value.trim().padStart(3, '0');
-            if (val.length === 3 && /^\d{3}$/.test(val)) {
-                watchPiste(val);
-            }
-        });
 
         // Auto-uppercase nationality codes
         document.getElementById('left-nationality').addEventListener('input', (e) => {
