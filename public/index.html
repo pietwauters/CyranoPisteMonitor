@@ -82,19 +82,21 @@
     /* Embed mode: fill the full iframe viewport, no body centering padding */
     body.embed-mode {
       background: #000;
-      align-items: stretch;
-      justify-content: stretch;
+      position: relative;
+      display: block;
     }
 
     body.embed-mode .scoring-container {
-      width: 100vw !important;
-      height: 100vh !important;
+      position: absolute !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
       min-width: unset !important;
       min-height: unset !important;
       max-width: unset !important;
       max-height: unset !important;
-      border-radius: 0;
-      aspect-ratio: unset;
+      border-radius: 0 !important;
+      aspect-ratio: unset !important;
     }
 
     /* Typography */
