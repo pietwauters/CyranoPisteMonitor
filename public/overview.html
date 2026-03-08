@@ -446,127 +446,86 @@
         }
 
         function setOnline(id, online) {
-            const t = tiles[id]; if (!t) return;
-            const dot = document.getElementById('dot_' + id);
-            if (online) { t.el.classList.remove('offline'); dot.classList.add('online'); dot.title = 'online'; }
-            else { t.el.classList.add('offline'); dot.classList.remove('online'); dot.title = 'offline'; }
-        }
+            const tiles = {}; // id -> {el, iframe, lastSeen}
+            const recentOrder = [];
 
-        function updateTileFromData(id, data) {
-            const t = ensureTile(id);
-            t.lastSeen = Date.now();
-            // apply fields similarly to index.js
-            if (data.hasOwnProperty('LeftName')) document.getElementById('left_' + pad(id)).textContent = data.LeftName || '';
-            if (data.hasOwnProperty('RightName')) document.getElementById('right_' + pad(id)).textContent = data.RightName || '';
-            if (data.hasOwnProperty('Lscore')) document.getElementById('lsc_' + pad(id)).textContent = String(data.Lscore);
-            if (data.hasOwnProperty('Rscore')) document.getElementById('rsc_' + pad(id)).textContent = String(data.Rscore);
-            if (data.hasOwnProperty('Stopwatch')) document.getElementById('clk_' + pad(id)).textContent = data.Stopwatch;
-            if (data.hasOwnProperty('Round')) {
-                const pr = document.getElementById('prd_' + pad(id));
-                if (pr) pr.textContent = data.Round;
-            }
-            // P-cards
-            if (data.hasOwnProperty('LP-card')) updatePCard('lPCard_' + pad(id), data['LP-card']);
-            else updatePCard('lPCard_' + pad(id), 0);
-            if (data.hasOwnProperty('RP-card')) updatePCard('rPCard_' + pad(id), data['RP-card']);
-            else updatePCard('rPCard_' + pad(id), 0);
+            function pad(id) { return String(id).padStart(3, '0') }
 
-            // regular cards (yellow/red counts)
-            if (data.hasOwnProperty('LYcard')) updateCardElement('lYellow_' + pad(id), data.LYcard);
-            else updateCardElement('lYellow_' + pad(id), 0);
-            if (data.hasOwnProperty('LRcard')) updateCardElement('lRed_' + pad(id), data.LRcard);
-            else updateCardElement('lRed_' + pad(id), 0);
-            if (data.hasOwnProperty('RYcard')) updateCardElement('rYellow_' + pad(id), data.RYcard);
-            else updateCardElement('rYellow_' + pad(id), 0);
-            if (data.hasOwnProperty('RRcard')) updateCardElement('rRed_' + pad(id), data.RRcard);
-            else updateCardElement('rRed_' + pad(id), 0);
-            // lights
-            if (data.hasOwnProperty('LLight')) toggleLight('lcol_', id, data.LLight);
-            if (data.hasOwnProperty('RLight')) toggleLight('rcol_', id, data.RLight);
-            if (data.hasOwnProperty('LWlight')) toggleLight('lwh_', id, data.LWlight);
-            if (data.hasOwnProperty('RWlight')) toggleLight('rwh_', id, data.RWlight);
-            // flags
-            if (data.hasOwnProperty('LeftNat')) updateFlag('lf_', id, data.LeftNat);
-            if (data.hasOwnProperty('RightNat')) updateFlag('rf_', id, data.RightNat);
+            function createIframeTile(id) {
+                id = pad(id);
+                if (tiles[id]) return tiles[id];
 
-            // Priority and UW2F timer
-            updatePriorityAndUW2F(id, data);
-            // mark online because we received fresh data
-            setOnline(pad(id), true);
-        }
+                const wrapper = document.createElement('div');
+                wrapper.className = 'tile iframe-tile';
+                wrapper.id = 'tile_' + id;
+                wrapper.style.position = 'relative';
+                wrapper.style.overflow = 'hidden';
+                wrapper.style.cursor = 'pointer';
 
-        function toggleLight(prefix, id, state) {
-            const el = document.getElementById(prefix + pad(id));
-            if (!el) return;
-            if (String(state) === '1') { el.classList.add('on'); } else { el.classList.remove('on'); }
-        }
+                const iframe = document.createElement('iframe');
+                iframe.src = `/piste/${id}`;
+                iframe.setAttribute('frameborder', '0');
+                iframe.style.width = '1920px';
+                iframe.style.height = '1080px';
+                iframe.style.border = '0';
+                iframe.style.transformOrigin = '0 0';
+                iframe.style.display = 'block';
 
-        function updateFlag(prefix, id, noc) {
-            const el = document.getElementById(prefix + pad(id));
-            if (!el) return;
-            if (noc && noc.length === 3) { el.src = `/flags/${noc.toUpperCase()}.png?t=${Date.now()}`; el.style.display = 'inline-block'; el.onerror = () => { el.style.display = 'none'; el.src = '' } }
-            else { el.style.display = 'none'; el.src = ''; }
-        }
+                wrapper.addEventListener('click', () => window.open(`/piste/${id}`, '_blank'));
+                wrapper.appendChild(iframe);
 
-        function updateCardElement(elId, value) {
-            const el = document.getElementById(elId);
-            if (!el) return;
-            const num = parseInt(value);
-            if (!isNaN(num) && num > 0) {
-                el.textContent = num;
-                el.style.display = 'inline-block';
-            } else {
-                el.textContent = '';
-                el.style.display = 'none';
-            }
-        }
-
-        function updatePCard(elId, value) {
-            const el = document.getElementById(elId);
-            if (!el) return;
-            el.classList.remove('smYellow', 'smRed');
-            const num = parseInt(value);
-            if (num === 1) { el.classList.add('smYellow'); el.style.display = 'inline-flex'; }
-            else if (num === 2) { el.classList.add('smRed'); el.style.display = 'inline-flex'; }
-            else { el.style.display = 'none'; }
-        }
-
-        function updatePriorityAndUW2F(id, data) {
-            // Priority
-            const lp = document.getElementById('lpref_' + pad(id));
-            const rp = document.getElementById('rpref_' + pad(id));
-            if (lp) { lp.style.display = 'none'; lp.textContent = ''; }
-            if (rp) { rp.style.display = 'none'; rp.textContent = ''; }
-            if (data.hasOwnProperty('Priority')) {
-                const pr = data.Priority || '';
-                if (pr === 'L' && lp) { lp.textContent = 'P'; lp.style.display = 'block'; }
-                else if (pr === 'R' && rp) { rp.textContent = 'P'; rp.style.display = 'block'; }
-            }
-
-            // UW2F timer handling (if present)
-            const uwEl = document.getElementById('uw2f_' + pad(id));
-            if (!uwEl) return;
-            if (data.hasOwnProperty('UW2F_Timer')) {
-                const uw = data.UW2F_Timer;
-                if (uw && uw.time) {
-                    uwEl.textContent = String(uw.time);
-                    // colour rules similar to main display
-                    uwEl.classList.remove('uw2f-red', 'uw2f-green', 'uw2f-orange');
-                    const parts = String(uw.time).split(':');
-                    let minutes = 0, seconds = 0;
-                    if (parts.length >= 2) { minutes = parseInt(parts[0]) || 0; seconds = parseInt(parts[1]) || 0; }
-                    else { seconds = parseInt(parts[0]) || 0; }
-                    const total = minutes * 60 + seconds;
-                    if (total < 50) uwEl.classList.add('uw2f-green');
-                    else if (total < 60) uwEl.classList.add('uw2f-orange');
-                    else uwEl.classList.add('uw2f-red');
-                    uwEl.style.display = 'block';
-                } else {
-                    uwEl.textContent = '';
-                    uwEl.style.display = 'none';
-                    uwEl.classList.remove('uw2f-red', 'uw2f-green', 'uw2f-orange');
+                if (recentOrder.length >= MAX_TILES) {
+                    const oldest = recentOrder.shift();
+                    const node = document.getElementById('tile_' + oldest);
+                    if (node) node.remove();
+                    delete tiles[oldest];
                 }
+
+                grid.prepend(wrapper);
+                recentOrder.push(id);
+                tiles[id] = { el: wrapper, iframe, lastSeen: Date.now() };
+
+                requestAnimationFrame(() => updateTileScale(id));
+
+                return tiles[id];
             }
+
+            function updateTileScale(id) {
+                const t = tiles[id]; if (!t) return;
+                const wrapper = t.el;
+                const w = wrapper.clientWidth || (grid.clientWidth / 3);
+                const h = wrapper.clientHeight || (w * 9 / 16);
+                const scale = Math.min(w / 1920, h / 1080, 1);
+                t.iframe.style.transform = `scale(${scale})`;
+                wrapper.style.height = (1080 * scale) + 'px';
+                wrapper.style.width = (1920 * scale) + 'px';
+            }
+        }
+
+        // UW2F timer handling (if present)
+        const uwEl = document.getElementById('uw2f_' + pad(id));
+        if (!uwEl) return;
+        if (data.hasOwnProperty('UW2F_Timer')) {
+            const uw = data.UW2F_Timer;
+            if (uw && uw.time) {
+                uwEl.textContent = String(uw.time);
+                // colour rules similar to main display
+                uwEl.classList.remove('uw2f-red', 'uw2f-green', 'uw2f-orange');
+                const parts = String(uw.time).split(':');
+                let minutes = 0, seconds = 0;
+                if (parts.length >= 2) { minutes = parseInt(parts[0]) || 0; seconds = parseInt(parts[1]) || 0; }
+                else { seconds = parseInt(parts[0]) || 0; }
+                const total = minutes * 60 + seconds;
+                if (total < 50) uwEl.classList.add('uw2f-green');
+                else if (total < 60) uwEl.classList.add('uw2f-orange');
+                else uwEl.classList.add('uw2f-red');
+                uwEl.style.display = 'block';
+            } else {
+                uwEl.textContent = '';
+                uwEl.style.display = 'none';
+                uwEl.classList.remove('uw2f-red', 'uw2f-green', 'uw2f-orange');
+            }
+        }
         }
 
         // Load saved fencer photos from public/fencers/piste-<id>/<position>.<ext>
@@ -606,20 +565,10 @@
             const m = topic.match(/Piste_(\d{1,3})/i);
             if (!m) return;
             const id = pad(m[1]);
-            // Try parse payload
-            let payload = message.payloadString;
-            let obj = {};
-            try { obj = JSON.parse(payload); } catch (e) { /* ignore non-json */ }
-            // If this looks like a Last Will indicator
-            if (/lwt|lastwill|last-will/i.test(topic)) {
-                // If payload contains offline-like text mark offline
-                const p = payload.toLowerCase();
-                if (p.includes('offline') || p.includes('0') || p.includes('false')) setOnline(id, false);
-                else setOnline(id, true);
-                return;
-            }
-            // Otherwise treat as normal data update
-            updateTileFromData(id, obj);
+            // ensure an iframe exists for this piste
+            createIframeTile(id);
+            // update lastSeen timestamp
+            if (tiles[id]) tiles[id].lastSeen = Date.now();
         };
 
         function pad(n) { return String(n).padStart(3, '0') }
@@ -640,16 +589,23 @@
             }
         });
 
-        // Periodic scan to mark offline if no recent messages
+        // Periodic update: remove stale iframes (no activity for 60s)
         setInterval(() => {
             const now = Date.now();
             Object.keys(tiles).forEach(id => {
                 const t = tiles[id]; if (!t) return;
-                if (now - t.lastSeen > 30000) { // 30s
-                    setOnline(id, false);
+                if (now - t.lastSeen > 60000) { // 60s
+                    const node = document.getElementById('tile_' + id);
+                    if (node) node.remove();
+                    delete tiles[id];
+                    const idx = recentOrder.indexOf(id);
+                    if (idx !== -1) recentOrder.splice(idx, 1);
+                } else {
+                    // update scale in case container resized
+                    updateTileScale(id);
                 }
             });
-        }, 5000);
+        }, 3000);
     </script>
 </body>
 
