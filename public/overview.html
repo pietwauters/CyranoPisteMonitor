@@ -73,6 +73,12 @@
             flex-direction: column
         }
 
+        /* iframe tiles: no padding, no aspect-ratio – JS sets height only */
+        .tile.iframe-tile {
+            padding: 0;
+            aspect-ratio: unset;
+        }
+
         .tile.offline {
             opacity: 0.4
         }
@@ -337,7 +343,6 @@
             display: none
         }
     </style>
-    <script src="/js/mqttws31.min.js"></script>
 </head>
 
 <body>
@@ -390,27 +395,33 @@
             grid.prepend(wrapper);
             recentOrder.push(id);
             tiles[id] = { el: wrapper, iframe };
-
-            requestAnimationFrame(() => updateTileScale(id));
             return tiles[id];
         }
 
         function updateTileScale(id) {
             const t = tiles[id]; if (!t) return;
             const wrapper = t.el;
-            const w = wrapper.clientWidth || (grid.clientWidth / 3);
-            const h = wrapper.clientHeight || (w * 9 / 16);
-            const scale = Math.min(w / 1920, h / 1080, 1);
+            // offsetWidth gives CSS-grid-assigned width; don't set wrapper width from JS
+            const w = wrapper.offsetWidth;
+            if (!w) return;
+            const scale = w / 1920;
             t.iframe.style.transform = `scale(${scale})`;
-            wrapper.style.height = (1080 * scale) + 'px';
-            wrapper.style.width = (1920 * scale) + 'px';
+            // only set height so the tile row has the right size
+            wrapper.style.height = Math.round(1080 * scale) + 'px';
         }
 
-        // create default 9 tiles: 001..009
+        function rescaleAll() {
+            Object.keys(tiles).forEach(updateTileScale);
+        }
+
+        // create all 9 tiles first so the grid lays them out correctly
         for (let i = 1; i <= MAX_TILES; i++) createIframeTile(i);
 
+        // double rAF: first tick lets DOM insert, second lets grid compute column widths
+        requestAnimationFrame(() => requestAnimationFrame(rescaleAll));
+
         // keep scales up to date on resize
-        window.addEventListener('resize', () => { Object.keys(tiles).forEach(updateTileScale); });
+        window.addEventListener('resize', () => requestAnimationFrame(rescaleAll));
     </script>
 </body>
 
