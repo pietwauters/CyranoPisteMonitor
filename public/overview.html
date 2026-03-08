@@ -26,310 +26,43 @@
             color: #8fd
         }
 
-        ;
-
-        .status-badge {
-            margin-left: auto;
-            padding: 6px 10px;
-            border-radius: 6px;
-            background: #333;
-            color: #ddd
-        }
-
         .overview-grid {
             display: grid;
             gap: 12px;
             padding: 12px;
-            box-sizing: border-box
+            box-sizing: border-box;
+            /* column count and widths are set entirely by JS rescaleAll().
+               JS uses document.documentElement.clientWidth so no CSS media
+               query is needed — this fallback is just for first paint. */
+            grid-template-columns: repeat(3, 1fr);
         }
 
-        /* Target 3x3 on large screens — columns set by JS, this just provides a fallback */
-        .overview-grid {
-            grid-template-columns: repeat(3, 1fr)
-        }
-
-        .tile {
-            background: #000;
-            border: 1px solid #222;
-            border-radius: 8px;
-            padding: 8px;
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
-            aspect-ratio: 16/9;
-            display: flex;
-            flex-direction: column
-        }
-
-        /* iframe tiles: block container so flex-shrink can never collapse the iframe height */
+        /*
+         * iframe tile layout — the key to correct scaling:
+         *
+         * The iframe is declared 1920×1080 px. We scale it down with
+         * CSS transform: scale(s) where s = colWidth / 1920.
+         * transform does NOT affect layout, so the iframe still occupies
+         * 1920×1080 in the document flow and overflows the wrapper.
+         * overflow:hidden clips it to the visible tile area.
+         *
+         * CRITICAL: the wrapper must be display:block (not flex).
+         * A flex container applies flex-shrink to its children, which
+         * would collapse the iframe's layout height from 1080px to the
+         * tile's visual height (~288px). That makes 1vh inside the iframe
+         * resolve to ~2.9px instead of 10.8px, breaking all vh-based
+         * sizing inside index.html.
+         *
+         * JS sets wrapper width and height to colWidth × (1080/1920*colWidth)
+         * so the grid rows are the right visual size.
+         */
         .tile.iframe-tile {
             display: block;
             padding: 0;
             aspect-ratio: unset;
             min-width: 0;
             overflow: hidden;
-        }
-
-        .tile.offline {
-            opacity: 0.4
-        }
-
-        .tile .head {
-            display: flex;
-            align-items: center;
-            gap: 8px
-        }
-
-        .tile .piste-id {
-            font-weight: bold;
-            color: #9fd
-        }
-
-        /* match main display colours and elements (scaled down) */
-        .lName {
-            background: #900;
-            color: #fff;
-            padding: 6px 8px;
-            border-radius: 6px
-        }
-
-        .rName {
-            background: #060;
-            color: #fff;
-            padding: 6px 8px;
-            border-radius: 6px
-        }
-
-        .smName {
-            font-size: 14px;
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis
-        }
-
-        .smScore {
-            font-size: 28px;
-            font-weight: 700
-        }
-
-        .smClock {
-            font-size: 14px
-        }
-
-        .smPeriod {
-            font-size: 12px
-        }
-
-        .left-priority,
-        .right-priority {
-            font-size: 12px;
-            display: none
-        }
-
-        .card-row {
-            display: flex;
-            gap: 6px;
-            align-items: center
-        }
-
-        .smCard {
-            width: 26px;
-            height: 14px;
-            border-radius: 3px;
-            display: none
-        }
-
-        .smPCard {
-            padding: 2px 4px;
-            border-radius: 3px;
-            display: none
-        }
-
-        .smYellow {
-            background: #ff0
-        }
-
-        .smRed {
-            background: #f00
-        }
-
-        .flag.small {
-            width: 34px;
-            height: 22px
-        }
-
-        .fencer-photo {
-            width: 64px;
-            height: 80px;
-            display: none
-        }
-
-        .smLamp {
-            width: 18px;
-            height: 8px;
-            border-radius: 3px;
-            background: #333
-        }
-
-        .lColor {
-            background: #900
-        }
-
-        .rColor {
-            background: #060
-        }
-
-        .lWhite,
-        .rWhite {
-            background: #ddd
-        }
-
-        .uw2f-red {
-            color: #f00
-        }
-
-        .uw2f-green {
-            color: #0f0
-        }
-
-        .uw2f-orange {
-            color: #ffa500
-        }
-
-        .tile .online-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #f44
-        }
-
-        .tile .online-dot.online {
-            background: #4caf50
-        }
-
-        .tile .names {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 6px
-        }
-
-        .tile .name {
-            width: 48%;
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            font-size: calc(2.5vmin + 2px)
-        }
-
-        .tile .score-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 6px
-        }
-
-        .tile .score {
-            font-size: calc(6vmin + 6px);
-            font-weight: 700
-        }
-
-        .tile .clock {
-            font-size: calc(3vmin + 2px)
-        }
-
-        .lights {
-            display: flex;
-            gap: 6px;
-            margin-top: 8px
-        }
-
-        .light {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: #222;
-            box-shadow: none
-        }
-
-        .light.on {
-            box-shadow: 0 0 8px currentColor
-        }
-
-        .light.red {
-            background: #550000;
-            color: #f00
-        }
-
-        .light.green {
-            background: #003300;
-            color: #0f0
-        }
-
-        .light.white {
-            background: #ddd;
-            color: #fff
-        }
-
-        .flag {
-            width: 36px;
-            height: 24px;
-            object-fit: cover;
-            border: 1px solid #222;
-            display: none
-        }
-
-        /* small versions of the main display elements so tiles match /piste */
-        .flag.small {
-            width: 40px;
-            height: 26px
-        }
-
-        /* ensure .national-flag (inherited from index.html) is constrained in overview tiles */
-        .national-flag.small {
-            width: 40px !important;
-            height: 26px !important;
-            max-width: 40px;
-            max-height: 26px;
-            object-fit: contain;
-            display: inline-block;
-        }
-
-        .fencer-photo {
-            width: 80px;
-            height: 100px;
-            background: #222;
-            border-radius: 6px;
-            overflow: hidden;
-            display: none
-        }
-
-        .fencer-photo img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover
-        }
-
-        .poolNum {
-            display: none
-        }
-
-        .uw2f-timer {
-            font-size: 12px
-        }
-
-        .p-ct {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            margin-top: auto
-        }
-
-        .p-card {
-            padding: 4px 6px;
-            border-radius: 4px;
-            background: #444;
-            color: #fff;
-            font-weight: bold;
-            display: none
+            cursor: pointer;
         }
     </style>
 </head>

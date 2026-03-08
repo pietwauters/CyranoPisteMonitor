@@ -501,9 +501,6 @@
   <select id="piste-select">
     <option value="">Select Piste</option>
   </select>
-  <a href="/overview"
-    style="position:absolute;top:2vmin;left:12vmin;color:#9fd;text-decoration:none;z-index:101">Overview</a>
-
   <div class="scoring-container">
     <div class="name-container">
       <div class="lName smName"></div>
@@ -606,26 +603,16 @@
 
 
 
-    // Embed mode: fill full viewport when loaded inside overview iframe
+    // Embed mode: loaded inside the /overview iframe grid.
+    // Adds body.embed-mode which (via CSS) makes .scoring-container fill
+    // the full iframe viewport with position:fixed, overriding all
+    // min/max/aspect-ratio constraints. handleResize() also checks this
+    // flag and returns early so it cannot re-apply the 16:9 shrink.
     if (new URLSearchParams(window.location.search).get('embed') === '1') {
       document.body.classList.add('embed-mode');
       document.addEventListener('DOMContentLoaded', () => {
         const btn = document.getElementById('fullscreen-btn');
         if (btn) btn.style.display = 'none';
-        const sc = document.querySelector('.scoring-container');
-        if (sc) {
-          sc.style.position = 'fixed';
-          sc.style.top = '0';
-          sc.style.left = '0';
-          sc.style.width = '100vw';
-          sc.style.height = '100vh';
-          sc.style.minWidth = '0';
-          sc.style.minHeight = '0';
-          sc.style.maxWidth = 'none';
-          sc.style.maxHeight = 'none';
-          sc.style.aspectRatio = 'unset';
-          sc.style.borderRadius = '0';
-        }
       });
     }
 
