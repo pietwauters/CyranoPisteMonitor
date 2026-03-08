@@ -31,7 +31,8 @@
     }
 
     :fullscreen #fullscreen-btn,
-    :fullscreen #piste-select {
+    :fullscreen #piste-select,
+    :fullscreen #show-colors-label {
       display: none;
     }
 
@@ -394,6 +395,21 @@
       font-size: 2vmin;
     }
 
+    /* Show colors checkbox */
+    #show-colors-label {
+      position: absolute;
+      top: 2vmin;
+      left: calc(2vmin + 14em);
+      z-index: 100;
+      color: #fff;
+      font-size: 2vmin;
+      display: flex;
+      align-items: center;
+      gap: 0.5vmin;
+      cursor: pointer;
+      user-select: none;
+    }
+
     /* Color classes */
     .smYellow {
       background: #ff0;
@@ -472,6 +488,9 @@
   <select id="piste-select">
     <option value="">Select Piste</option>
   </select>
+  <label id="show-colors-label">
+    <input type="checkbox" id="show-colors"> Show colors
+  </label>
 
   <div class="scoring-container">
     <div class="name-container">
@@ -579,6 +598,43 @@
     window.onload = function () {
       const pisteSelect = document.getElementById('piste-select');
       const urlPiste = getPisteFromURL();
+
+      // Color piste names to prepend when "Show colors" is checked
+      const COLOR_PISTES = ['Podium', 'Red', 'Green', 'Blue', 'Yellow', 'Red1', 'Green1', 'Blue1', 'Yellow1'];
+
+      function buildColorOptions() {
+        return COLOR_PISTES.map(name => {
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.text = name;
+          opt.dataset.colorPiste = 'true';
+          return opt;
+        });
+      }
+
+      function addColorPistes() {
+        const firstOption = pisteSelect.options[0];
+        buildColorOptions().reverse().forEach(opt => pisteSelect.insertBefore(opt, firstOption.nextSibling));
+      }
+
+      function removeColorPistes() {
+        Array.from(pisteSelect.options)
+          .filter(o => o.dataset.colorPiste)
+          .forEach(o => o.remove());
+      }
+
+      document.getElementById('show-colors').addEventListener('change', function () {
+        const current = pisteSelect.value;
+        if (this.checked) {
+          addColorPistes();
+        } else {
+          removeColorPistes();
+        }
+        // Restore selection if still present
+        if (Array.from(pisteSelect.options).some(o => o.value === current)) {
+          pisteSelect.value = current;
+        }
+      });
 
       // Populate selector options
       for (let i = 1; i <= 999; i++) {
