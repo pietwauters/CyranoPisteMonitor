@@ -554,6 +554,7 @@
     <script>
         let client;
         let subscribedPiste = null; // piste number we are currently subscribed to
+        let lastPisteCheck = 0;    // timestamp of last message processed (throttle)
 
         // Subscribe to FromDevice topic for the given piste and unsubscribe old one
         function watchPiste(pisteNumber) {
@@ -589,6 +590,10 @@
 
                 client.onMessageArrived = (message) => {
                     if (!message.destinationName.includes('/FromDevice')) return;
+                    // Throttle: only check the Piste name once per second
+                    const now = Date.now();
+                    if (now - lastPisteCheck < 1000) return;
+                    lastPisteCheck = now;
                     try {
                         const data = JSON.parse(message.payloadString);
                         if (!data.hasOwnProperty('Piste')) return;
