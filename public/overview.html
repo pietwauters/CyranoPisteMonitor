@@ -26,6 +26,21 @@
             color: #8fd
         }
 
+        #fullscreen-btn {
+            margin-left: auto;
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        #fullscreen-btn:hover {
+            background: #444;
+        }
+
         .overview-grid {
             display: grid;
             gap: 12px;
@@ -70,7 +85,8 @@
 <body>
     <div class="header">
         <h1>Strips Overview</h1>
-        <a href="/" style="color:#9fd;text-decoration:none;margin-left:auto">← Display</a>
+        <button id="fullscreen-btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+        <a href="/" style="color:#9fd;text-decoration:none;margin-left:8px">← Display</a>
     </div>
 
     <div class="overview-grid" id="grid"></div>
@@ -147,6 +163,21 @@
 
         rescaleAll();
         new ResizeObserver(rescaleAll).observe(document.documentElement);
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        document.addEventListener('fullscreenchange', () => {
+            document.getElementById('fullscreen-btn').textContent =
+                document.fullscreenElement ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+            // re-scale after the viewport changes size
+            rescaleAll();
+        });
     </script>
 </body>
 
