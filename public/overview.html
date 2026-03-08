@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Overview - Strip Grid</title>
+    <style>
+        body {
+            margin: 0;
+            background: #111;
+            color: #fff;
+            font-family: Arial, Helvetica, sans-serif
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: #0d0d0d
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 18px;
+            color: #8fd
+        }
+
+        ;
+
+        .status-badge {
+            margin-left: auto;
+            padding: 6px 10px;
+            border-radius: 6px;
+            background: #333;
+            color: #ddd
+        }
+
+        .overview-grid {
+            display: grid;
+            gap: 12px;
+            padding: 12px;
+            box-sizing: border-box
+        }
+
+        /* Target 3x3 on large screens */
+        @media(min-width:1400px) {
+            .overview-grid {
+                grid-template-columns: repeat(3, 1fr)
+            }
+        }
+
+        @media(min-width:900px) and (max-width:1399px) {
+            .overview-grid {
+                grid-template-columns: repeat(2, 1fr)
+            }
+        }
+
+        @media(max-width:899px) {
+            .overview-grid {
+                grid-template-columns: repeat(1, 1fr)
+            }
+        }
+
+        .tile {
+            background: #000;
+            border: 1px solid #222;
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+            aspect-ratio: 16/9;
+            display: flex;
+            flex-direction: column
+        }
+
+        .tile.offline {
+            opacity: 0.4
+        }
+
+        .tile .head {
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .tile .piste-id {
+            font-weight: bold;
+            color: #9fd
+        }
+
+        .tile .online-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #f44
+        }
+
+        .tile .online-dot.online {
+            background: #4caf50
+        }
+
+        .tile .names {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 6px
+        }
+
+        .tile .name {
+            width: 48%;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            font-size: calc(2.5vmin + 2px)
+        }
+
+        .tile .score-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 6px
+        }
+
+        .tile .score {
+            font-size: calc(6vmin + 6px);
+            font-weight: 700
+        }
+
+        .tile .clock {
+            font-size: calc(3vmin + 2px)
+        }
+
+        .lights {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px
+        }
+
+        .light {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #222;
+            box-shadow: none
+        }
+
+        .light.on {
+            box-shadow: 0 0 8px currentColor
+        }
+
+        .light.red {
+            background: #550000;
+            color: #f00
+        }
+
+        .light.green {
+            background: #003300;
+            color: #0f0
+        }
+
+        .light.white {
+            background: #ddd;
+            color: #fff
+        }
+
+        .flag {
+            width: 36px;
+            height: 24px;
+            object-fit: cover;
+            border: 1px solid #222;
+            display: none
+        }
+
+        .p-ct {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: auto
+        }
+
+        .p-card {
+            padding: 4px 6px;
+            border-radius: 4px;
+            background: #444;
+            color: #fff;
+            font-weight: bold;
+            display: none
+        }
+    </style>
+    <script src="/js/mqttws31.min.js"></script>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Strips Overview</h1>
+        <div class="status-badge" id="mqtt-status">MQTT: disconnected</div>
+        <a href="/" style="color:#9fd;text-decoration:none;margin-left:8px">← Display</a>
+    </div>
+
+    <div class="overview-grid" id="grid"></div>
+
+    <script>
+        // Keep an LRU of visible tiles (max 9)
+        const MAX_TILES = 9;
+        const grid = document.getElementById('grid');
+        const mqttStatusEl = document.getElementById('mqtt-status');
+
+        const useSSL = location.protocol === 'https:';
+        const port = useSSL ? 9002 : 9001;
+        const client = new Paho.MQTT.Client(location.hostname, port, "overview_" + Date.now());
+
+        const tiles = {}; // id -> {el, lastSeen, data}
+        const recentOrder = [];
+
+        function pad(id) { return String(id).padStart(3, '0') }
+
+        function ensureTile(id) {
+            id = pad(id);
+            if (tiles[id]) return tiles[id];
+            // Create tile DOM
+            const el = document.createElement('div'); el.className = 'tile'; el.id = 'tile_' + id;
+            el.innerHTML = `
+        <div class="head"><div class="piste-id">Strip_${id}</div><div style="flex:1"></div><div class="online-dot" id="dot_${id}"></div></div>
+        <div class="names"><div class="name left-name" id="left_${id}"></div><div class="name right-name" id="right_${id}"></div></div>
+        <div class="score-row"><div class="score left-score" id="lsc_${id}">0</div><div class="clock" id="clk_${id}">0:00</div><div class="score right-score" id="rsc_${id}">0</div></div>
+        <div class="lights"><div class="light red" id="lcol_${id}"></div><div class="light white" id="lwh_${id}"></div><div style="flex:1"></div><div class="light white" id="rwh_${id}"></div><div class="light green" id="rcol_${id}"></div></div>
+        <div class="p-ct"><img class="flag left-flag" id="lf_${id}" alt=""><div class="p-card" id="lp_${id}">P</div><div style="flex:1"></div><div class="p-card" id="rp_${id}">P</div><img class="flag right-flag" id="rf_${id}" alt=""></div>
+      `;
+
+            // Manage grid size: if we have > MAX_TILES remove oldest
+            if (recentOrder.length >= MAX_TILES) {
+                const oldest = recentOrder.shift();
+                const node = document.getElementById('tile_' + oldest);
+                if (node) node.remove();
+                delete tiles[oldest];
+            }
+
+            grid.prepend(el);
+            recentOrder.push(id);
+            tiles[id] = { el, lastSeen: Date.now(), data: {} };
+            return tiles[id];
+        }
+
+        function setOnline(id, online) {
+            const t = tiles[id]; if (!t) return;
+            const dot = document.getElementById('dot_' + id);
+            if (online) { t.el.classList.remove('offline'); dot.classList.add('online'); dot.title = 'online'; }
+            else { t.el.classList.add('offline'); dot.classList.remove('online'); dot.title = 'offline'; }
+        }
+
+        function updateTileFromData(id, data) {
+            const t = ensureTile(id);
+            t.lastSeen = Date.now();
+            // apply fields similarly to index.js
+            if (data.hasOwnProperty('LeftName')) document.getElementById('left_' + pad(id)).textContent = data.LeftName || '';
+            if (data.hasOwnProperty('RightName')) document.getElementById('right_' + pad(id)).textContent = data.RightName || '';
+            if (data.hasOwnProperty('Lscore')) document.getElementById('lsc_' + pad(id)).textContent = String(data.Lscore);
+            if (data.hasOwnProperty('Rscore')) document.getElementById('rsc_' + pad(id)).textContent = String(data.Rscore);
+            if (data.hasOwnProperty('Stopwatch')) document.getElementById('clk_' + pad(id)).textContent = data.Stopwatch;
+            // cards
+            if (data.hasOwnProperty('LP-card')) {
+                const el = document.getElementById('lp_' + pad(id)); el.style.display = 'inline-block'; el.textContent = 'P';
+            }
+            if (data.hasOwnProperty('RP-card')) {
+                const el = document.getElementById('rp_' + pad(id)); el.style.display = 'inline-block'; el.textContent = 'P';
+            }
+            // lights
+            if (data.hasOwnProperty('LLight')) toggleLight('lcol_', id, data.LLight);
+            if (data.hasOwnProperty('RLight')) toggleLight('rcol_', id, data.RLight);
+            if (data.hasOwnProperty('LWlight')) toggleLight('lwh_', id, data.LWlight);
+            if (data.hasOwnProperty('RWlight')) toggleLight('rwh_', id, data.RWlight);
+            // flags
+            if (data.hasOwnProperty('LeftNat')) updateFlag('lf_', id, data.LeftNat);
+            if (data.hasOwnProperty('RightNat')) updateFlag('rf_', id, data.RightNat);
+            // mark online because we received fresh data
+            setOnline(pad(id), true);
+        }
+
+        function toggleLight(prefix, id, state) {
+            const el = document.getElementById(prefix + pad(id));
+            if (!el) return;
+            if (String(state) === '1') { el.classList.add('on'); } else { el.classList.remove('on'); }
+        }
+
+        function updateFlag(prefix, id, noc) {
+            const el = document.getElementById(prefix + pad(id));
+            if (!el) return;
+            if (noc && noc.length === 3) { el.src = `/flags/${noc.toUpperCase()}.png?t=${Date.now()}`; el.style.display = 'inline-block'; el.onerror = () => { el.style.display = 'none'; el.src = '' } }
+            else { el.style.display = 'none'; el.src = ''; }
+        }
+
+        client.onConnectionLost = () => { mqttStatusEl.textContent = 'MQTT: disconnected'; };
+        client.onMessageArrived = (message) => {
+            const topic = message.destinationName;
+            // Expect topics like MQTT_Cyrano/Piste_001/FromDevice ...
+            const m = topic.match(/Piste_(\d{1,3})/i);
+            if (!m) return;
+            const id = pad(m[1]);
+            // Try parse payload
+            let payload = message.payloadString;
+            let obj = {};
+            try { obj = JSON.parse(payload); } catch (e) { /* ignore non-json */ }
+            // If this looks like a Last Will indicator
+            if (/lwt|lastwill|last-will/i.test(topic)) {
+                // If payload contains offline-like text mark offline
+                const p = payload.toLowerCase();
+                if (p.includes('offline') || p.includes('0') || p.includes('false')) setOnline(id, false);
+                else setOnline(id, true);
+                return;
+            }
+            // Otherwise treat as normal data update
+            updateTileFromData(id, obj);
+        };
+
+        function pad(n) { return String(n).padStart(3, '0') }
+
+        client.connect({ useSSL: useSSL, onSuccess: () => { mqttStatusEl.textContent = 'MQTT: connected'; client.subscribe('MQTT_Cyrano/Piste_+/#'); }, onFailure: (e) => { mqttStatusEl.textContent = 'MQTT: connect failed' } });
+
+        // Periodic scan to mark offline if no recent messages
+        setInterval(() => {
+            const now = Date.now();
+            Object.keys(tiles).forEach(id => {
+                const t = tiles[id]; if (!t) return;
+                if (now - t.lastSeen > 30000) { // 30s
+                    setOnline(id, false);
+                }
+            });
+        }, 5000);
+    </script>
+</body>
+
+</html>
