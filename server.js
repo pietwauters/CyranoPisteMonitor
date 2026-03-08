@@ -57,6 +57,11 @@ app.get('/piste-mgt', (req, res) => {
   res.sendFile(__dirname + '/public/piste-mgt.html');
 });
 
+// Overview page route
+app.get('/overview', (req, res) => {
+  res.sendFile(__dirname + '/public/overview.html');
+});
+
 // Direct piste display route
 app.get('/piste/:number', (req, res) => {
   res.sendFile(__dirname + '/public/index.html');
