@@ -77,7 +77,11 @@
 
     <script>
         // iframe-only overview: create 9 scaled iframes of /piste/NNN by default
-        const MAX_TILES = 9;
+        // Number of tiles from URL param ?tiles=N, default 16.
+        // Column count is derived as ceil(sqrt(N)) giving natural grid shapes:
+        // 4→2×2, 6→3×2, 9→3×3, 12→4×3, 16→4×4
+        const MAX_TILES = Math.max(1, parseInt(new URLSearchParams(location.search).get('tiles')) || 16);
+        const COLS = Math.ceil(Math.sqrt(MAX_TILES));
         const grid = document.getElementById('grid');
         const tiles = {}; // id -> {el, iframe}
         const recentOrder = [];
@@ -125,13 +129,11 @@
             const viewW = document.documentElement.clientWidth;
             const padding = 12;
             const gap = 12;
-            const cols = viewW >= 1400 ? 3 : viewW >= 900 ? 2 : 1;
-            const colW = Math.floor((viewW - 2 * padding - (cols - 1) * gap) / cols);
+            const colW = Math.floor((viewW - 2 * padding - (COLS - 1) * gap) / COLS);
             if (colW <= 0) return;
             const scale = colW / 1920;
             const tileH = Math.round(1080 * scale);
-            // Override grid columns with exact pixel widths — no CSS media query mismatch
-            grid.style.gridTemplateColumns = `repeat(${cols}, ${colW}px)`;
+            grid.style.gridTemplateColumns = `repeat(${COLS}, ${colW}px)`;
             Object.keys(tiles).forEach(id => {
                 const t = tiles[id]; if (!t) return;
                 t.el.style.width = colW + 'px';
@@ -140,7 +142,7 @@
             });
         }
 
-        // create all 9 tiles first so the grid lays them out correctly
+        // create all tiles so the grid lays them out correctly before first paint
         for (let i = 1; i <= MAX_TILES; i++) createIframeTile(i);
 
         rescaleAll();
