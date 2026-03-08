@@ -88,6 +88,117 @@
             color: #9fd
         }
 
+        /* match main display colours and elements (scaled down) */
+        .lName {
+            background: #900;
+            color: #fff;
+            padding: 6px 8px;
+            border-radius: 6px
+        }
+
+        .rName {
+            background: #060;
+            color: #fff;
+            padding: 6px 8px;
+            border-radius: 6px
+        }
+
+        .smName {
+            font-size: 14px;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis
+        }
+
+        .smScore {
+            font-size: 28px;
+            font-weight: 700
+        }
+
+        .smClock {
+            font-size: 14px
+        }
+
+        .smPeriod {
+            font-size: 12px
+        }
+
+        .left-priority,
+        .right-priority {
+            font-size: 12px;
+            display: none
+        }
+
+        .card-row {
+            display: flex;
+            gap: 6px;
+            align-items: center
+        }
+
+        .smCard {
+            width: 26px;
+            height: 14px;
+            border-radius: 3px;
+            display: none
+        }
+
+        .smPCard {
+            padding: 2px 4px;
+            border-radius: 3px;
+            display: none
+        }
+
+        .smYellow {
+            background: #ff0
+        }
+
+        .smRed {
+            background: #f00
+        }
+
+        .flag.small {
+            width: 34px;
+            height: 22px
+        }
+
+        .fencer-photo {
+            width: 64px;
+            height: 80px;
+            display: none
+        }
+
+        .smLamp {
+            width: 18px;
+            height: 8px;
+            border-radius: 3px;
+            background: #333
+        }
+
+        .lColor {
+            background: #900
+        }
+
+        .rColor {
+            background: #060
+        }
+
+        .lWhite,
+        .rWhite {
+            background: #ddd
+        }
+
+        .uw2f-red {
+            color: #f00
+        }
+
+        .uw2f-green {
+            color: #0f0
+        }
+
+        .uw2f-orange {
+            color: #ffa500
+        }
+
         .tile .online-dot {
             width: 10px;
             height: 10px;
@@ -249,23 +360,63 @@
             // Create tile DOM
             const el = document.createElement('div'); el.className = 'tile'; el.id = 'tile_' + id;
             el.innerHTML = `
-                <div class="head"><div class="piste-id">Strip_${id}</div><div style="flex:1"></div><div class="online-dot" id="dot_${id}"></div></div>
-                <div class="names"><div class="name left-name" id="left_${id}"></div><div class="name right-name" id="right_${id}"></div></div>
-                <div class="score-row"><div class="score left-score" id="lsc_${id}">0</div><div class="clock" id="clk_${id}">0:00</div><div class="score right-score" id="rsc_${id}">0</div></div>
-                <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
-                    <div style="display:flex;align-items:center;gap:8px">
-                        <img class="flag small" id="lf_${id}" alt="">
-                        <div class="fencer-photo left-photo" id="leftphoto_${id}"><img id="leftimg_${id}" alt="Left"></div>
-                    </div>
-                    <div style="flex:1"></div>
-                    <div style="display:flex;align-items:center;gap:8px">
-                        <div class="fencer-photo right-photo" id="rightphoto_${id}"><img id="rightimg_${id}" alt="Right"></div>
-                        <img class="flag small" id="rf_${id}" alt="">
-                    </div>
-                </div>
-                <div class="lights"><div class="light red" id="lcol_${id}"></div><div class="light white" id="lwh_${id}"></div><div style="flex:1"></div><div class="light white" id="rwh_${id}"></div><div class="light green" id="rcol_${id}"></div></div>
-                <div class="p-ct"><div class="p-card" id="lp_${id}">P</div><div style="flex:1"></div><div class="p-card" id="rp_${id}">P</div></div>
-            `;
+                                <div class="head"><div class="piste-id">Strip_${id}</div><div style="flex:1"></div><div class="online-dot" id="dot_${id}"></div></div>
+                                <div class="names"><div class="lName smName" id="left_${id}"></div><div class="rName smName" id="right_${id}"></div></div>
+
+                                <div class="top-row" style="margin-top:6px">
+                                    <div class="left-lights" style="display:flex;gap:6px;align-items:center">
+                                        <div class="lColor smLamp" id="lcol_${id}"></div>
+                                        <div class="lWhite smLamp" id="lwh_${id}"></div>
+                                    </div>
+                                    <div style="flex:0 0 auto;text-align:center"><div class="poolNum">Strip_${id}</div></div>
+                                    <div class="right-lights" style="display:flex;gap:6px;align-items:center">
+                                        <div class="rWhite smLamp" id="rwh_${id}"></div>
+                                        <div class="rColor smLamp" id="rcol_${id}"></div>
+                                    </div>
+                                </div>
+
+                                <div id="strip_${id}" class="scoringMachine" style="margin-top:6px;flex:1;display:flex;flex-direction:column">
+                                    <div class="scoring-inner" style="flex:1;">
+                                        <div class="flag-container">
+                                            <img class="national-flag left-flag small" id="lf_${id}" alt="Left">
+                                            <img class="national-flag right-flag small" id="rf_${id}" alt="Right">
+                                        </div>
+
+                                        <div style="display:flex;gap:10px;align-items:center;justify-content:center;margin-top:6px">
+                                            <div class="fencer-photo left-photo" id="leftphoto_${id}"><img id="leftimg_${id}" alt="Left"></div>
+                                            <div style="flex:1"></div>
+                                            <div class="fencer-photo right-photo" id="rightphoto_${id}"><img id="rightimg_${id}" alt="Right"></div>
+                                        </div>
+
+                                        <div class="timer-container" style="text-align:center;margin-top:6px">
+                                            <div class="clock smClock" id="clk_${id}">0:00</div>
+                                            <div class="period smPeriod" id="prd_${id}">1</div>
+                                            <div id="uw2f_${id}" class="uw2f-timer" style="display:none"></div>
+                                            <div class="left-priority" id="lpref_${id}" style="display:none"></div>
+                                            <div class="right-priority" id="rpref_${id}" style="display:none"></div>
+                                        </div>
+
+                                        <div class="card-container" style="margin-top:6px;display:flex;align-items:center;justify-content:space-between">
+                                            <div style="display:flex;gap:6px;align-items:center">
+                                                <div class="lPCard smCard smPCard" id="lPCard_${id}">P</div>
+                                                <div class="lRed smCard" id="lRed_${id}"></div>
+                                                <div class="lYellow smCard" id="lYellow_${id}"></div>
+                                            </div>
+                                            <div style="display:flex;gap:6px;align-items:center">
+                                                <div class="rYellow smCard" id="rYellow_${id}"></div>
+                                                <div class="rRed smCard" id="rRed_${id}"></div>
+                                                <div class="rPCard smCard smPCard" id="rPCard_${id}">P</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="score-container" style="margin-top:6px;display:flex;justify-content:space-between;align-items:center">
+                                            <div class="lScore smScore" id="lsc_${id}">0</div>
+                                            <div style="flex:1"></div>
+                                            <div class="rScore smScore" id="rsc_${id}">0</div>
+                                        </div>
+                                    </div>
+                                </div>
+                        `;
 
             // Manage grid size: if we have > MAX_TILES remove oldest
             if (recentOrder.length >= MAX_TILES) {
@@ -300,13 +451,25 @@
             if (data.hasOwnProperty('Lscore')) document.getElementById('lsc_' + pad(id)).textContent = String(data.Lscore);
             if (data.hasOwnProperty('Rscore')) document.getElementById('rsc_' + pad(id)).textContent = String(data.Rscore);
             if (data.hasOwnProperty('Stopwatch')) document.getElementById('clk_' + pad(id)).textContent = data.Stopwatch;
-            // cards
-            if (data.hasOwnProperty('LP-card')) {
-                const el = document.getElementById('lp_' + pad(id)); el.style.display = 'inline-block'; el.textContent = 'P';
+            if (data.hasOwnProperty('Round')) {
+                const pr = document.getElementById('prd_' + pad(id));
+                if (pr) pr.textContent = data.Round;
             }
-            if (data.hasOwnProperty('RP-card')) {
-                const el = document.getElementById('rp_' + pad(id)); el.style.display = 'inline-block'; el.textContent = 'P';
-            }
+            // P-cards
+            if (data.hasOwnProperty('LP-card')) updatePCard('lPCard_' + pad(id), data['LP-card']);
+            else updatePCard('lPCard_' + pad(id), 0);
+            if (data.hasOwnProperty('RP-card')) updatePCard('rPCard_' + pad(id), data['RP-card']);
+            else updatePCard('rPCard_' + pad(id), 0);
+
+            // regular cards (yellow/red counts)
+            if (data.hasOwnProperty('LYcard')) updateCardElement('lYellow_' + pad(id), data.LYcard);
+            else updateCardElement('lYellow_' + pad(id), 0);
+            if (data.hasOwnProperty('LRcard')) updateCardElement('lRed_' + pad(id), data.LRcard);
+            else updateCardElement('lRed_' + pad(id), 0);
+            if (data.hasOwnProperty('RYcard')) updateCardElement('rYellow_' + pad(id), data.RYcard);
+            else updateCardElement('rYellow_' + pad(id), 0);
+            if (data.hasOwnProperty('RRcard')) updateCardElement('rRed_' + pad(id), data.RRcard);
+            else updateCardElement('rRed_' + pad(id), 0);
             // lights
             if (data.hasOwnProperty('LLight')) toggleLight('lcol_', id, data.LLight);
             if (data.hasOwnProperty('RLight')) toggleLight('rcol_', id, data.RLight);
@@ -315,6 +478,9 @@
             // flags
             if (data.hasOwnProperty('LeftNat')) updateFlag('lf_', id, data.LeftNat);
             if (data.hasOwnProperty('RightNat')) updateFlag('rf_', id, data.RightNat);
+
+            // Priority and UW2F timer
+            updatePriorityAndUW2F(id, data);
             // mark online because we received fresh data
             setOnline(pad(id), true);
         }
@@ -330,6 +496,67 @@
             if (!el) return;
             if (noc && noc.length === 3) { el.src = `/flags/${noc.toUpperCase()}.png?t=${Date.now()}`; el.style.display = 'inline-block'; el.onerror = () => { el.style.display = 'none'; el.src = '' } }
             else { el.style.display = 'none'; el.src = ''; }
+        }
+
+        function updateCardElement(elId, value) {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            const num = parseInt(value);
+            if (!isNaN(num) && num > 0) {
+                el.textContent = num;
+                el.style.display = 'inline-block';
+            } else {
+                el.textContent = '';
+                el.style.display = 'none';
+            }
+        }
+
+        function updatePCard(elId, value) {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            el.classList.remove('smYellow', 'smRed');
+            const num = parseInt(value);
+            if (num === 1) { el.classList.add('smYellow'); el.style.display = 'inline-flex'; }
+            else if (num === 2) { el.classList.add('smRed'); el.style.display = 'inline-flex'; }
+            else { el.style.display = 'none'; }
+        }
+
+        function updatePriorityAndUW2F(id, data) {
+            // Priority
+            const lp = document.getElementById('lpref_' + pad(id));
+            const rp = document.getElementById('rpref_' + pad(id));
+            if (lp) { lp.style.display = 'none'; lp.textContent = ''; }
+            if (rp) { rp.style.display = 'none'; rp.textContent = ''; }
+            if (data.hasOwnProperty('Priority')) {
+                const pr = data.Priority || '';
+                if (pr === 'L' && lp) { lp.textContent = 'P'; lp.style.display = 'block'; }
+                else if (pr === 'R' && rp) { rp.textContent = 'P'; rp.style.display = 'block'; }
+            }
+
+            // UW2F timer handling (if present)
+            const uwEl = document.getElementById('uw2f_' + pad(id));
+            if (!uwEl) return;
+            if (data.hasOwnProperty('UW2F_Timer')) {
+                const uw = data.UW2F_Timer;
+                if (uw && uw.time) {
+                    uwEl.textContent = String(uw.time);
+                    // colour rules similar to main display
+                    uwEl.classList.remove('uw2f-red', 'uw2f-green', 'uw2f-orange');
+                    const parts = String(uw.time).split(':');
+                    let minutes = 0, seconds = 0;
+                    if (parts.length >= 2) { minutes = parseInt(parts[0]) || 0; seconds = parseInt(parts[1]) || 0; }
+                    else { seconds = parseInt(parts[0]) || 0; }
+                    const total = minutes * 60 + seconds;
+                    if (total < 50) uwEl.classList.add('uw2f-green');
+                    else if (total < 60) uwEl.classList.add('uw2f-orange');
+                    else uwEl.classList.add('uw2f-red');
+                    uwEl.style.display = 'block';
+                } else {
+                    uwEl.textContent = '';
+                    uwEl.style.display = 'none';
+                    uwEl.classList.remove('uw2f-red', 'uw2f-green', 'uw2f-orange');
+                }
+            }
         }
 
         // Load saved fencer photos from public/fencers/piste-<id>/<position>.<ext>
