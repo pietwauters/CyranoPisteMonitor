@@ -289,7 +289,11 @@
             else { el.style.display = 'none'; el.src = ''; }
         }
 
-        client.onConnectionLost = () => { mqttStatusEl.textContent = 'MQTT: disconnected'; };
+        client.onConnectionLost = (responseObject) => {
+            console.error('MQTT connection lost', responseObject);
+            const reason = responseObject && responseObject.errorMessage ? responseObject.errorMessage : '';
+            mqttStatusEl.textContent = 'MQTT: disconnected' + (reason ? (': ' + reason) : '');
+        };
         client.onMessageArrived = (message) => {
             const topic = message.destinationName;
             // Expect topics like MQTT_Cyrano/Piste_001/FromDevice ...
@@ -314,7 +318,21 @@
 
         function pad(n) { return String(n).padStart(3, '0') }
 
-        client.connect({ useSSL: useSSL, onSuccess: () => { mqttStatusEl.textContent = 'MQTT: connected'; client.subscribe('MQTT_Cyrano/Piste_+/#'); }, onFailure: (e) => { mqttStatusEl.textContent = 'MQTT: connect failed' } });
+        mqttStatusEl.textContent = 'MQTT: connecting...';
+        client.connect({
+            useSSL: useSSL,
+            onSuccess: () => {
+                mqttStatusEl.textContent = 'MQTT: connected';
+                // Subscribe to all piste topics under MQTT_Cyrano
+                // Use '+' as a single-level wildcard (must occupy a whole level)
+                client.subscribe('MQTT_Cyrano/+/#');
+            },
+            onFailure: (err) => {
+                console.error('MQTT connect failed', err);
+                const msg = err && err.errorMessage ? err.errorMessage : JSON.stringify(err);
+                mqttStatusEl.textContent = 'MQTT: connect failed: ' + msg;
+            }
+        });
 
         // Periodic scan to mark offline if no recent messages
         setInterval(() => {
