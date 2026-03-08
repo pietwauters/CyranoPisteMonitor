@@ -610,8 +610,22 @@
     // Embed mode: fill full viewport when loaded inside overview iframe
     if (new URLSearchParams(window.location.search).get('embed') === '1') {
       document.body.classList.add('embed-mode');
-      const btn = document.getElementById('fullscreen-btn');
-      if (btn) btn.style.display = 'none';
+      // Apply inline styles after DOM ready — these beat all CSS rules
+      document.addEventListener('DOMContentLoaded', () => {
+        const btn = document.getElementById('fullscreen-btn');
+        if (btn) btn.style.display = 'none';
+        const sc = document.querySelector('.scoring-container');
+        if (sc) {
+          sc.style.cssText = [
+            'position:absolute', 'inset:0', 'top:0', 'right:0', 'bottom:0', 'left:0',
+            'width:100%', 'height:100%',
+            'min-width:0', 'min-height:0', 'max-width:none', 'max-height:none',
+            'aspect-ratio:unset', 'border-radius:0',
+            'box-sizing:border-box', 'padding:2vmin',
+            'display:flex', 'flex-direction:column'
+          ].join(';');
+        }
+      });
     }
 
     // Initialize piste selector
