@@ -135,7 +135,7 @@
                 delete tiles[oldest];
             }
 
-            grid.prepend(wrapper);
+            grid.appendChild(wrapper);
             recentOrder.push(id);
             tiles[id] = { el: wrapper, iframe };
             return tiles[id];
