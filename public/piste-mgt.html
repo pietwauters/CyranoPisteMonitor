@@ -539,7 +539,8 @@
             <div class="camera-status" id="camera-status">Initializing camera...</div>
             <div class="camera-controls">
                 <button class="capture-btn" onclick="capturePhoto()" id="capture-btn" disabled>Capture Photo</button>
-                <button class="switch-camera-btn" onclick="switchCamera()" id="switch-camera-btn" disabled>🔄 Switch Camera</button>
+                <button class="switch-camera-btn" onclick="switchCamera()" id="switch-camera-btn" disabled>🔄 Switch
+                    Camera</button>
                 <button class="cancel-camera-btn" onclick="closeCamera()">Cancel</button>
             </div>
         </div>
@@ -653,8 +654,8 @@
 
             try {
                 const topic = `MQTT_Cyrano/Piste_${data.pisteNumber}/FromSoftware`;
-                const pisteNum = parseInt(data.pisteNumber, 10).toString();
-
+                //const pisteNum = parseInt(data.pisteNumber, 10).toString();
+                const pisteNum = "";
                 // First, send ACK message
                 const ackPayload = {
                     Protocol: "EFP1.1",
