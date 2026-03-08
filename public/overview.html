@@ -43,23 +43,9 @@
             box-sizing: border-box
         }
 
-        /* Target 3x3 on large screens */
-        @media(min-width:1400px) {
-            .overview-grid {
-                grid-template-columns: repeat(3, 1fr)
-            }
-        }
-
-        @media(min-width:900px) and (max-width:1399px) {
-            .overview-grid {
-                grid-template-columns: repeat(2, 1fr)
-            }
-        }
-
-        @media(max-width:899px) {
-            .overview-grid {
-                grid-template-columns: repeat(1, 1fr)
-            }
+        /* Target 3x3 on large screens — columns set by JS, this just provides a fallback */
+        .overview-grid {
+            grid-template-columns: repeat(3, 1fr)
         }
 
         .tile {
@@ -403,19 +389,18 @@
         }
 
         function rescaleAll() {
-            const cols = window.innerWidth >= 1400 ? 3 : window.innerWidth >= 900 ? 2 : 1;
+            const viewW = document.documentElement.clientWidth;
             const padding = 12;
             const gap = 12;
-            const viewW = document.documentElement.clientWidth;
+            const cols = viewW >= 1400 ? 3 : viewW >= 900 ? 2 : 1;
             const colW = Math.floor((viewW - 2 * padding - (cols - 1) * gap) / cols);
             if (colW <= 0) return;
             const scale = colW / 1920;
             const tileH = Math.round(1080 * scale);
+            // Override grid columns with exact pixel widths — no CSS media query mismatch
+            grid.style.gridTemplateColumns = `repeat(${cols}, ${colW}px)`;
             Object.keys(tiles).forEach(id => {
                 const t = tiles[id]; if (!t) return;
-                // Set BOTH width and height explicitly so overflow:hidden clips correctly.
-                // CSS transform does NOT affect layout, so without explicit width the
-                // 1920px iframe still occupies 1920px and the scaling appears invisible.
                 t.el.style.width = colW + 'px';
                 t.el.style.height = tileH + 'px';
                 t.iframe.style.transform = `scale(${scale})`;
@@ -425,11 +410,8 @@
         // create all 9 tiles first so the grid lays them out correctly
         for (let i = 1; i <= MAX_TILES; i++) createIframeTile(i);
 
-        // fire after paint so clientWidth is final
-        requestAnimationFrame(rescaleAll);
-
-        // also react to viewport resize (breakpoint changes etc.)
-        window.addEventListener('resize', rescaleAll);
+        rescaleAll();
+        new ResizeObserver(rescaleAll).observe(document.documentElement);
     </script>
 </body>
 
