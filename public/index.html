@@ -961,6 +961,7 @@
 
     // Resize handler
     function handleResize() {
+      if (document.body.classList.contains('embed-mode')) return;
       const container = document.querySelector('.scoring-container');
 
       if (document.fullscreenElement) {
