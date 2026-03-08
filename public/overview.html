@@ -59,14 +59,13 @@
             flex-direction: column
         }
 
-        /* iframe tiles: no padding, no aspect-ratio – JS sets height only */
+        /* iframe tiles: block container so flex-shrink can never collapse the iframe height */
         .tile.iframe-tile {
+            display: block;
             padding: 0;
             aspect-ratio: unset;
-            /* CRITICAL: without min-width:0 the 1920px iframe forces the wrapper
-               to expand to 1920px, making scale=1 and hiding the scaling effect */
             min-width: 0;
-            max-width: 100%;
+            overflow: hidden;
         }
 
         .tile.offline {
@@ -369,6 +368,7 @@
             iframe.style.width = '1920px';
             iframe.style.height = '1080px';
             iframe.style.border = '0';
+            iframe.style.flexShrink = '0';  /* never let a flex parent collapse this */
             iframe.style.transformOrigin = '0 0';
             iframe.style.display = 'block';
 
