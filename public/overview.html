@@ -171,6 +171,35 @@
             display: none
         }
 
+        /* small versions of the main display elements so tiles match /piste */
+        .flag.small {
+            width: 40px;
+            height: 26px
+        }
+
+        .fencer-photo {
+            width: 80px;
+            height: 100px;
+            background: #222;
+            border-radius: 6px;
+            overflow: hidden;
+            display: none
+        }
+
+        .fencer-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover
+        }
+
+        .poolNum {
+            display: none
+        }
+
+        .uw2f-timer {
+            font-size: 12px
+        }
+
         .p-ct {
             display: flex;
             gap: 8px;
@@ -220,12 +249,23 @@
             // Create tile DOM
             const el = document.createElement('div'); el.className = 'tile'; el.id = 'tile_' + id;
             el.innerHTML = `
-        <div class="head"><div class="piste-id">Strip_${id}</div><div style="flex:1"></div><div class="online-dot" id="dot_${id}"></div></div>
-        <div class="names"><div class="name left-name" id="left_${id}"></div><div class="name right-name" id="right_${id}"></div></div>
-        <div class="score-row"><div class="score left-score" id="lsc_${id}">0</div><div class="clock" id="clk_${id}">0:00</div><div class="score right-score" id="rsc_${id}">0</div></div>
-        <div class="lights"><div class="light red" id="lcol_${id}"></div><div class="light white" id="lwh_${id}"></div><div style="flex:1"></div><div class="light white" id="rwh_${id}"></div><div class="light green" id="rcol_${id}"></div></div>
-        <div class="p-ct"><img class="flag left-flag" id="lf_${id}" alt=""><div class="p-card" id="lp_${id}">P</div><div style="flex:1"></div><div class="p-card" id="rp_${id}">P</div><img class="flag right-flag" id="rf_${id}" alt=""></div>
-      `;
+                <div class="head"><div class="piste-id">Strip_${id}</div><div style="flex:1"></div><div class="online-dot" id="dot_${id}"></div></div>
+                <div class="names"><div class="name left-name" id="left_${id}"></div><div class="name right-name" id="right_${id}"></div></div>
+                <div class="score-row"><div class="score left-score" id="lsc_${id}">0</div><div class="clock" id="clk_${id}">0:00</div><div class="score right-score" id="rsc_${id}">0</div></div>
+                <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <img class="flag small" id="lf_${id}" alt="">
+                        <div class="fencer-photo left-photo" id="leftphoto_${id}"><img id="leftimg_${id}" alt="Left"></div>
+                    </div>
+                    <div style="flex:1"></div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <div class="fencer-photo right-photo" id="rightphoto_${id}"><img id="rightimg_${id}" alt="Right"></div>
+                        <img class="flag small" id="rf_${id}" alt="">
+                    </div>
+                </div>
+                <div class="lights"><div class="light red" id="lcol_${id}"></div><div class="light white" id="lwh_${id}"></div><div style="flex:1"></div><div class="light white" id="rwh_${id}"></div><div class="light green" id="rcol_${id}"></div></div>
+                <div class="p-ct"><div class="p-card" id="lp_${id}">P</div><div style="flex:1"></div><div class="p-card" id="rp_${id}">P</div></div>
+            `;
 
             // Manage grid size: if we have > MAX_TILES remove oldest
             if (recentOrder.length >= MAX_TILES) {
@@ -238,6 +278,9 @@
             grid.prepend(el);
             recentOrder.push(id);
             tiles[id] = { el, lastSeen: Date.now(), data: {} };
+            // try load existing fencer photos for this piste
+            loadPhoto('left', id);
+            loadPhoto('right', id);
             return tiles[id];
         }
 
@@ -287,6 +330,32 @@
             if (!el) return;
             if (noc && noc.length === 3) { el.src = `/flags/${noc.toUpperCase()}.png?t=${Date.now()}`; el.style.display = 'inline-block'; el.onerror = () => { el.style.display = 'none'; el.src = '' } }
             else { el.style.display = 'none'; el.src = ''; }
+        }
+
+        // Load saved fencer photos from public/fencers/piste-<id>/<position>.<ext>
+        function loadPhoto(position, pisteNumber) {
+            const pid = pad(pisteNumber);
+            const photoEl = document.getElementById(position + 'photo_' + pid);
+            const imgEl = document.getElementById(position + 'img_' + pid);
+            if (!photoEl || !imgEl) return;
+
+            const extensions = ['jpg', 'jpeg', 'png', 'gif'];
+            let idx = 0;
+
+            function tryNext() {
+                if (idx >= extensions.length) {
+                    photoEl.style.display = 'none';
+                    return;
+                }
+                const ext = extensions[idx++];
+                const url = `/fencers/piste-${pid}/${position}.${ext}?t=${Date.now()}`;
+                const tester = new Image();
+                tester.onload = () => { imgEl.src = url; photoEl.style.display = 'block'; };
+                tester.onerror = tryNext;
+                tester.src = url;
+            }
+
+            tryNext();
         }
 
         client.onConnectionLost = (responseObject) => {
