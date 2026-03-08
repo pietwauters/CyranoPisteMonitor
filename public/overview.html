@@ -77,6 +77,10 @@
         .tile.iframe-tile {
             padding: 0;
             aspect-ratio: unset;
+            /* CRITICAL: without min-width:0 the 1920px iframe forces the wrapper
+               to expand to 1920px, making scale=1 and hiding the scaling effect */
+            min-width: 0;
+            max-width: 100%;
         }
 
         .tile.offline {
@@ -398,30 +402,32 @@
             return tiles[id];
         }
 
-        function updateTileScale(id) {
-            const t = tiles[id]; if (!t) return;
-            const wrapper = t.el;
-            // offsetWidth gives CSS-grid-assigned width; don't set wrapper width from JS
-            const w = wrapper.offsetWidth;
-            if (!w) return;
-            const scale = w / 1920;
-            t.iframe.style.transform = `scale(${scale})`;
-            // only set height so the tile row has the right size
-            wrapper.style.height = Math.round(1080 * scale) + 'px';
-        }
-
         function rescaleAll() {
-            Object.keys(tiles).forEach(updateTileScale);
+            // Derive column width from the grid itself to avoid the min-width:auto trap.
+            // grid has padding:12px (box-sizing:border-box) and gap:12px.
+            // For 3 columns: colW = (gridWidth - 2*padding - 2*gap) / 3
+            const cols = window.innerWidth >= 1400 ? 3 : window.innerWidth >= 900 ? 2 : 1;
+            const padding = 12;
+            const gap = 12;
+            const colW = (grid.offsetWidth - 2 * padding - (cols - 1) * gap) / cols;
+            if (colW <= 0) return;
+            const scale = colW / 1920;
+            Object.keys(tiles).forEach(id => {
+                const t = tiles[id]; if (!t) return;
+                t.iframe.style.transform = `scale(${scale})`;
+                t.el.style.height = Math.round(1080 * scale) + 'px';
+            });
         }
 
         // create all 9 tiles first so the grid lays them out correctly
         for (let i = 1; i <= MAX_TILES; i++) createIframeTile(i);
 
-        // double rAF: first tick lets DOM insert, second lets grid compute column widths
-        requestAnimationFrame(() => requestAnimationFrame(rescaleAll));
+        // ResizeObserver fires reliably after layout is complete
+        const ro = new ResizeObserver(rescaleAll);
+        ro.observe(grid);
 
-        // keep scales up to date on resize
-        window.addEventListener('resize', () => requestAnimationFrame(rescaleAll));
+        // also handle resize for breakpoint changes
+        window.addEventListener('resize', rescaleAll);
     </script>
 </body>
 
