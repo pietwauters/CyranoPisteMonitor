@@ -406,26 +406,27 @@
             const cols = window.innerWidth >= 1400 ? 3 : window.innerWidth >= 900 ? 2 : 1;
             const padding = 12;
             const gap = 12;
-            // Use document.documentElement.clientWidth instead of grid.offsetWidth
-            // to avoid the iframe expanding the grid before scaling is applied.
             const viewW = document.documentElement.clientWidth;
-            const colW = (viewW - 2 * padding - (cols - 1) * gap) / cols;
-            console.log('[rescaleAll] viewW=' + viewW + ' cols=' + cols + ' colW=' + colW.toFixed(1) + ' scale=' + (colW / 1920).toFixed(4));
+            const colW = Math.floor((viewW - 2 * padding - (cols - 1) * gap) / cols);
             if (colW <= 0) return;
             const scale = colW / 1920;
+            const tileH = Math.round(1080 * scale);
             Object.keys(tiles).forEach(id => {
                 const t = tiles[id]; if (!t) return;
+                // Set BOTH width and height explicitly so overflow:hidden clips correctly.
+                // CSS transform does NOT affect layout, so without explicit width the
+                // 1920px iframe still occupies 1920px and the scaling appears invisible.
+                t.el.style.width = colW + 'px';
+                t.el.style.height = tileH + 'px';
                 t.iframe.style.transform = `scale(${scale})`;
-                t.el.style.height = Math.round(1080 * scale) + 'px';
             });
         }
 
         // create all 9 tiles first so the grid lays them out correctly
         for (let i = 1; i <= MAX_TILES; i++) createIframeTile(i);
 
-        // fire immediately, then again after a short delay as safety net
-        rescaleAll();
-        setTimeout(rescaleAll, 300);
+        // fire after paint so clientWidth is final
+        requestAnimationFrame(rescaleAll);
 
         // also react to viewport resize (breakpoint changes etc.)
         window.addEventListener('resize', rescaleAll);
