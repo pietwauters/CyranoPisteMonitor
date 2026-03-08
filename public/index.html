@@ -79,6 +79,24 @@
       flex-direction: column;
     }
 
+    /* Embed mode: fill the full iframe viewport, no body centering padding */
+    body.embed-mode {
+      background: #000;
+      align-items: stretch;
+      justify-content: stretch;
+    }
+
+    body.embed-mode .scoring-container {
+      width: 100vw !important;
+      height: 100vh !important;
+      min-width: unset !important;
+      min-height: unset !important;
+      max-width: unset !important;
+      max-height: unset !important;
+      border-radius: 0;
+      aspect-ratio: unset;
+    }
+
     /* Typography */
     h3 {
       color: #fff;
@@ -586,6 +604,13 @@
     }
 
 
+
+    // Embed mode: fill full viewport when loaded inside overview iframe
+    if (new URLSearchParams(window.location.search).get('embed') === '1') {
+      document.body.classList.add('embed-mode');
+      const btn = document.getElementById('fullscreen-btn');
+      if (btn) btn.style.display = 'none';
+    }
 
     // Initialize piste selector
     window.onload = function () {
