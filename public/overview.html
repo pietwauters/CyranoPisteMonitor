@@ -343,92 +343,43 @@
 <body>
     <div class="header">
         <h1>Strips Overview</h1>
-        <div class="status-badge" id="mqtt-status">MQTT: disconnected</div>
-        <a href="/" style="color:#9fd;text-decoration:none;margin-left:8px">← Display</a>
+        <a href="/" style="color:#9fd;text-decoration:none;margin-left:auto">← Display</a>
     </div>
 
     <div class="overview-grid" id="grid"></div>
 
     <script>
-        // Keep an LRU of visible tiles (max 9)
+        // iframe-only overview: create 9 scaled iframes of /piste/NNN by default
         const MAX_TILES = 9;
         const grid = document.getElementById('grid');
-        const mqttStatusEl = document.getElementById('mqtt-status');
-
-        const useSSL = location.protocol === 'https:';
-        const port = useSSL ? 9002 : 9001;
-        const client = new Paho.MQTT.Client(location.hostname, port, "overview_" + Date.now());
-
-        const tiles = {}; // id -> {el, lastSeen, data}
+        const tiles = {}; // id -> {el, iframe}
         const recentOrder = [];
 
-        function pad(id) { return String(id).padStart(3, '0') }
+        function pad(n) { return String(n).padStart(3, '0'); }
 
-        function ensureTile(id) {
+        function createIframeTile(id) {
             id = pad(id);
             if (tiles[id]) return tiles[id];
-            // Create tile DOM
-            const el = document.createElement('div'); el.className = 'tile'; el.id = 'tile_' + id;
-            el.innerHTML = `
-                                <div class="head"><div class="piste-id">Strip_${id}</div><div style="flex:1"></div><div class="online-dot" id="dot_${id}"></div></div>
-                                <div class="names"><div class="lName smName" id="left_${id}"></div><div class="rName smName" id="right_${id}"></div></div>
 
-                                <div class="top-row" style="margin-top:6px">
-                                    <div class="left-lights" style="display:flex;gap:6px;align-items:center">
-                                        <div class="lColor smLamp" id="lcol_${id}"></div>
-                                        <div class="lWhite smLamp" id="lwh_${id}"></div>
-                                    </div>
-                                    <div style="flex:0 0 auto;text-align:center"><div class="poolNum">Strip_${id}</div></div>
-                                    <div class="right-lights" style="display:flex;gap:6px;align-items:center">
-                                        <div class="rWhite smLamp" id="rwh_${id}"></div>
-                                        <div class="rColor smLamp" id="rcol_${id}"></div>
-                                    </div>
-                                </div>
+            const wrapper = document.createElement('div');
+            wrapper.className = 'tile iframe-tile';
+            wrapper.id = 'tile_' + id;
+            wrapper.style.position = 'relative';
+            wrapper.style.overflow = 'hidden';
+            wrapper.style.cursor = 'pointer';
 
-                                <div id="strip_${id}" class="scoringMachine" style="margin-top:6px;flex:1;display:flex;flex-direction:column">
-                                    <div class="scoring-inner" style="flex:1;">
-                                        <div class="flag-container">
-                                            <img class="national-flag left-flag small" id="lf_${id}" alt="Left">
-                                            <img class="national-flag right-flag small" id="rf_${id}" alt="Right">
-                                        </div>
+            const iframe = document.createElement('iframe');
+            iframe.src = `/piste/${id}`;
+            iframe.setAttribute('frameborder', '0');
+            iframe.style.width = '1920px';
+            iframe.style.height = '1080px';
+            iframe.style.border = '0';
+            iframe.style.transformOrigin = '0 0';
+            iframe.style.display = 'block';
 
-                                        <div style="display:flex;gap:10px;align-items:center;justify-content:center;margin-top:6px">
-                                            <div class="fencer-photo left-photo" id="leftphoto_${id}"><img id="leftimg_${id}" alt="Left"></div>
-                                            <div style="flex:1"></div>
-                                            <div class="fencer-photo right-photo" id="rightphoto_${id}"><img id="rightimg_${id}" alt="Right"></div>
-                                        </div>
+            wrapper.addEventListener('click', () => window.open(`/piste/${id}`, '_blank'));
+            wrapper.appendChild(iframe);
 
-                                        <div class="timer-container" style="text-align:center;margin-top:6px">
-                                            <div class="clock smClock" id="clk_${id}">0:00</div>
-                                            <div class="period smPeriod" id="prd_${id}">1</div>
-                                            <div id="uw2f_${id}" class="uw2f-timer" style="display:none"></div>
-                                            <div class="left-priority" id="lpref_${id}" style="display:none"></div>
-                                            <div class="right-priority" id="rpref_${id}" style="display:none"></div>
-                                        </div>
-
-                                        <div class="card-container" style="margin-top:6px;display:flex;align-items:center;justify-content:space-between">
-                                            <div style="display:flex;gap:6px;align-items:center">
-                                                <div class="lPCard smCard smPCard" id="lPCard_${id}">P</div>
-                                                <div class="lRed smCard" id="lRed_${id}"></div>
-                                                <div class="lYellow smCard" id="lYellow_${id}"></div>
-                                            </div>
-                                            <div style="display:flex;gap:6px;align-items:center">
-                                                <div class="rYellow smCard" id="rYellow_${id}"></div>
-                                                <div class="rRed smCard" id="rRed_${id}"></div>
-                                                <div class="rPCard smCard smPCard" id="rPCard_${id}">P</div>
-                                            </div>
-                                        </div>
-
-                                        <div class="score-container" style="margin-top:6px;display:flex;justify-content:space-between;align-items:center">
-                                            <div class="lScore smScore" id="lsc_${id}">0</div>
-                                            <div style="flex:1"></div>
-                                            <div class="rScore smScore" id="rsc_${id}">0</div>
-                                        </div>
-                                    </div>
-                                </div>
-                        `;
-
-            // Manage grid size: if we have > MAX_TILES remove oldest
             if (recentOrder.length >= MAX_TILES) {
                 const oldest = recentOrder.shift();
                 const node = document.getElementById('tile_' + oldest);
@@ -436,176 +387,30 @@
                 delete tiles[oldest];
             }
 
-            grid.prepend(el);
+            grid.prepend(wrapper);
             recentOrder.push(id);
-            tiles[id] = { el, lastSeen: Date.now(), data: {} };
-            // try load existing fencer photos for this piste
-            loadPhoto('left', id);
-            loadPhoto('right', id);
+            tiles[id] = { el: wrapper, iframe };
+
+            requestAnimationFrame(() => updateTileScale(id));
             return tiles[id];
         }
 
-        function setOnline(id, online) {
-            const tiles = {}; // id -> {el, iframe, lastSeen}
-            const recentOrder = [];
-
-            function pad(id) { return String(id).padStart(3, '0') }
-
-            function createIframeTile(id) {
-                id = pad(id);
-                if (tiles[id]) return tiles[id];
-
-                const wrapper = document.createElement('div');
-                wrapper.className = 'tile iframe-tile';
-                wrapper.id = 'tile_' + id;
-                wrapper.style.position = 'relative';
-                wrapper.style.overflow = 'hidden';
-                wrapper.style.cursor = 'pointer';
-
-                const iframe = document.createElement('iframe');
-                iframe.src = `/piste/${id}`;
-                iframe.setAttribute('frameborder', '0');
-                iframe.style.width = '1920px';
-                iframe.style.height = '1080px';
-                iframe.style.border = '0';
-                iframe.style.transformOrigin = '0 0';
-                iframe.style.display = 'block';
-
-                wrapper.addEventListener('click', () => window.open(`/piste/${id}`, '_blank'));
-                wrapper.appendChild(iframe);
-
-                if (recentOrder.length >= MAX_TILES) {
-                    const oldest = recentOrder.shift();
-                    const node = document.getElementById('tile_' + oldest);
-                    if (node) node.remove();
-                    delete tiles[oldest];
-                }
-
-                grid.prepend(wrapper);
-                recentOrder.push(id);
-                tiles[id] = { el: wrapper, iframe, lastSeen: Date.now() };
-
-                requestAnimationFrame(() => updateTileScale(id));
-
-                return tiles[id];
-            }
-
-            function updateTileScale(id) {
-                const t = tiles[id]; if (!t) return;
-                const wrapper = t.el;
-                const w = wrapper.clientWidth || (grid.clientWidth / 3);
-                const h = wrapper.clientHeight || (w * 9 / 16);
-                const scale = Math.min(w / 1920, h / 1080, 1);
-                t.iframe.style.transform = `scale(${scale})`;
-                wrapper.style.height = (1080 * scale) + 'px';
-                wrapper.style.width = (1920 * scale) + 'px';
-            }
+        function updateTileScale(id) {
+            const t = tiles[id]; if (!t) return;
+            const wrapper = t.el;
+            const w = wrapper.clientWidth || (grid.clientWidth / 3);
+            const h = wrapper.clientHeight || (w * 9 / 16);
+            const scale = Math.min(w / 1920, h / 1080, 1);
+            t.iframe.style.transform = `scale(${scale})`;
+            wrapper.style.height = (1080 * scale) + 'px';
+            wrapper.style.width = (1920 * scale) + 'px';
         }
 
-        // UW2F timer handling (if present)
-        const uwEl = document.getElementById('uw2f_' + pad(id));
-        if (!uwEl) return;
-        if (data.hasOwnProperty('UW2F_Timer')) {
-            const uw = data.UW2F_Timer;
-            if (uw && uw.time) {
-                uwEl.textContent = String(uw.time);
-                // colour rules similar to main display
-                uwEl.classList.remove('uw2f-red', 'uw2f-green', 'uw2f-orange');
-                const parts = String(uw.time).split(':');
-                let minutes = 0, seconds = 0;
-                if (parts.length >= 2) { minutes = parseInt(parts[0]) || 0; seconds = parseInt(parts[1]) || 0; }
-                else { seconds = parseInt(parts[0]) || 0; }
-                const total = minutes * 60 + seconds;
-                if (total < 50) uwEl.classList.add('uw2f-green');
-                else if (total < 60) uwEl.classList.add('uw2f-orange');
-                else uwEl.classList.add('uw2f-red');
-                uwEl.style.display = 'block';
-            } else {
-                uwEl.textContent = '';
-                uwEl.style.display = 'none';
-                uwEl.classList.remove('uw2f-red', 'uw2f-green', 'uw2f-orange');
-            }
-        }
-        }
+        // create default 9 tiles: 001..009
+        for (let i = 1; i <= MAX_TILES; i++) createIframeTile(i);
 
-        // Load saved fencer photos from public/fencers/piste-<id>/<position>.<ext>
-        function loadPhoto(position, pisteNumber) {
-            const pid = pad(pisteNumber);
-            const photoEl = document.getElementById(position + 'photo_' + pid);
-            const imgEl = document.getElementById(position + 'img_' + pid);
-            if (!photoEl || !imgEl) return;
-
-            const extensions = ['jpg', 'jpeg', 'png', 'gif'];
-            let idx = 0;
-
-            function tryNext() {
-                if (idx >= extensions.length) {
-                    photoEl.style.display = 'none';
-                    return;
-                }
-                const ext = extensions[idx++];
-                const url = `/fencers/piste-${pid}/${position}.${ext}?t=${Date.now()}`;
-                const tester = new Image();
-                tester.onload = () => { imgEl.src = url; photoEl.style.display = 'block'; };
-                tester.onerror = tryNext;
-                tester.src = url;
-            }
-
-            tryNext();
-        }
-
-        client.onConnectionLost = (responseObject) => {
-            console.error('MQTT connection lost', responseObject);
-            const reason = responseObject && responseObject.errorMessage ? responseObject.errorMessage : '';
-            mqttStatusEl.textContent = 'MQTT: disconnected' + (reason ? (': ' + reason) : '');
-        };
-        client.onMessageArrived = (message) => {
-            const topic = message.destinationName;
-            // Expect topics like MQTT_Cyrano/Piste_001/FromDevice ...
-            const m = topic.match(/Piste_(\d{1,3})/i);
-            if (!m) return;
-            const id = pad(m[1]);
-            // ensure an iframe exists for this piste
-            createIframeTile(id);
-            // update lastSeen timestamp
-            if (tiles[id]) tiles[id].lastSeen = Date.now();
-        };
-
-        function pad(n) { return String(n).padStart(3, '0') }
-
-        mqttStatusEl.textContent = 'MQTT: connecting...';
-        client.connect({
-            useSSL: useSSL,
-            onSuccess: () => {
-                mqttStatusEl.textContent = 'MQTT: connected';
-                // Subscribe to all piste topics under MQTT_Cyrano
-                // Use '+' as a single-level wildcard (must occupy a whole level)
-                client.subscribe('MQTT_Cyrano/+/#');
-            },
-            onFailure: (err) => {
-                console.error('MQTT connect failed', err);
-                const msg = err && err.errorMessage ? err.errorMessage : JSON.stringify(err);
-                mqttStatusEl.textContent = 'MQTT: connect failed: ' + msg;
-            }
-        });
-
-        // Periodic update: remove stale iframes (no activity for 60s)
-        setInterval(() => {
-            const now = Date.now();
-            Object.keys(tiles).forEach(id => {
-                const t = tiles[id]; if (!t) return;
-                if (now - t.lastSeen > 60000) { // 60s
-                    const node = document.getElementById('tile_' + id);
-                    if (node) node.remove();
-                    delete tiles[id];
-                    const idx = recentOrder.indexOf(id);
-                    if (idx !== -1) recentOrder.splice(idx, 1);
-                } else {
-                    // update scale in case container resized
-                    updateTileScale(id);
-                }
-            });
-        }, 3000);
+        // keep scales up to date on resize
+        window.addEventListener('resize', () => { Object.keys(tiles).forEach(updateTileScale); });
     </script>
 </body>
 
