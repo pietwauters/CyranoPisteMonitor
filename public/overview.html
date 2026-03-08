@@ -288,6 +288,16 @@
             height: 26px
         }
 
+        /* ensure .national-flag (inherited from index.html) is constrained in overview tiles */
+        .national-flag.small {
+            width: 40px !important;
+            height: 26px !important;
+            max-width: 40px;
+            max-height: 26px;
+            object-fit: contain;
+            display: inline-block;
+        }
+
         .fencer-photo {
             width: 80px;
             height: 100px;
