@@ -245,7 +245,10 @@ app.post('/api/enrol', (req, res) => {
 
         // Return signed certificate
         const certPem = fs.readFileSync(certFile, 'utf8');
-        res.json({ cert: certPem });
+        res.json({
+  deviceCert: certPem,
+  caCert: fs.readFileSync(`${ENROLMENT_CA}/ca.crt`, 'utf8')
+});
 
         console.log(`Device ${deviceId} enrolled successfully`);
       } catch (err) {
