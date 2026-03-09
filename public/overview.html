@@ -97,10 +97,18 @@
 
         // ?pistes=1,2,5  → manual mode: show exactly these pistes, no MQTT
         // (nothing)       → MQTT auto-discovery via Connection topic
-        // ?tiles=N        → cap maximum tiles in MQTT mode (default 16)
+        // ?tiles=N        → cap maximum tiles in MQTT mode (default 32)
+        // ?cols=N         → fixed-column mode: tile size is fixed to viewport width / N,
+        //                   extra rows scroll; no fullscreen button
         const pisteParam = params.get('pistes');
         const MANUAL_MODE = !!pisteParam;
-        const MAX_CAP = Math.max(1, parseInt(params.get('tiles')) || 16);
+        const MAX_CAP = Math.max(1, parseInt(params.get('tiles')) || 32);
+        const colsParam = params.get('cols');
+        const COL_MODE = !!colsParam;
+        const MAX_COLS = Math.max(1, parseInt(colsParam) || 4);
+
+        // Hide fullscreen button in col mode (tiles scroll, fullscreen adds nothing)
+        if (COL_MODE) document.getElementById('fullscreen-btn').style.display = 'none';
 
         const grid = document.getElementById('grid');
         const tiles = {}; // padded-id -> { el, iframe }
@@ -156,27 +164,49 @@
         function rescaleAll() {
             const count = Object.keys(tiles).length;
             if (count === 0) return;
-            const cols = Math.ceil(Math.sqrt(count));
-            const inFS = !!document.fullscreenElement;
             const viewW = document.documentElement.clientWidth;
             const viewH = document.documentElement.clientHeight;
-            const padding = inFS ? 0 : 12, gap = inFS ? 2 : 12;
-            const rows = Math.ceil(count / cols);
-            const colW = Math.floor((viewW - 2 * padding - (cols - 1) * gap) / cols);
-            const rowH = Math.floor((viewH - 2 * padding - (rows - 1) * gap) / rows);
-            const colWbyH = Math.floor(rowH * 1920 / 1080);
-            const effectiveColW = inFS ? Math.min(colW, colWbyH) : colW;
-            if (effectiveColW <= 0) return;
-            const scale = effectiveColW / 1920;
-            const tileH = Math.round(1080 * scale);
-            grid.style.padding = padding + 'px';
-            grid.style.gap = gap + 'px';
-            grid.style.gridTemplateColumns = `repeat(${cols}, ${effectiveColW}px)`;
-            Object.values(tiles).forEach(t => {
-                t.el.style.width = effectiveColW + 'px';
-                t.el.style.height = tileH + 'px';
-                t.iframe.style.transform = `scale(${scale})`;
-            });
+
+            if (COL_MODE) {
+                // Fixed-column mode: tile width is always viewW / MAX_COLS.
+                // Extra rows overflow the page → vertical scrollbar.
+                const cols = Math.min(count, MAX_COLS);
+                const padding = 12, gap = 12;
+                const colW = Math.floor((viewW - 2 * padding - (cols - 1) * gap) / cols);
+                if (colW <= 0) return;
+                const scale = colW / 1920;
+                const tileH = Math.round(1080 * scale);
+                grid.style.padding = padding + 'px';
+                grid.style.gap = gap + 'px';
+                grid.style.gridTemplateColumns = `repeat(${cols}, ${colW}px)`;
+                Object.values(tiles).forEach(t => {
+                    t.el.style.width = colW + 'px';
+                    t.el.style.height = tileH + 'px';
+                    t.iframe.style.transform = `scale(${scale})`;
+                });
+            } else {
+                // Fit-all mode: scale everything so all tiles fit on one screen.
+                // In fullscreen: also constrain by viewport height.
+                const inFS = !!document.fullscreenElement;
+                const cols = Math.ceil(Math.sqrt(count));
+                const rows = Math.ceil(count / cols);
+                const padding = inFS ? 0 : 12, gap = inFS ? 2 : 12;
+                const colW = Math.floor((viewW - 2 * padding - (cols - 1) * gap) / cols);
+                const rowH = Math.floor((viewH - 2 * padding - (rows - 1) * gap) / rows);
+                const colWbyH = Math.floor(rowH * 1920 / 1080);
+                const effectiveColW = inFS ? Math.min(colW, colWbyH) : colW;
+                if (effectiveColW <= 0) return;
+                const scale = effectiveColW / 1920;
+                const tileH = Math.round(1080 * scale);
+                grid.style.padding = padding + 'px';
+                grid.style.gap = gap + 'px';
+                grid.style.gridTemplateColumns = `repeat(${cols}, ${effectiveColW}px)`;
+                Object.values(tiles).forEach(t => {
+                    t.el.style.width = effectiveColW + 'px';
+                    t.el.style.height = tileH + 'px';
+                    t.iframe.style.transform = `scale(${scale})`;
+                });
+            }
         }
 
         if (MANUAL_MODE) {
