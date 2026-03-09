@@ -91,23 +91,24 @@
 
     <div class="overview-grid" id="grid"></div>
 
+    <script src="/js/mqttws31.min.js"></script>
     <script>
-        // iframe-only overview: create 9 scaled iframes of /piste/NNN by default
-        // Number of tiles from URL param ?tiles=N, default 16.
-        // Column count is derived as ceil(sqrt(N)) giving natural grid shapes:
-        // 4→2×2, 6→3×2, 9→3×3, 12→4×3, 16→4×4
-        const MAX_TILES = Math.max(1, parseInt(new URLSearchParams(location.search).get('tiles')) || 16);
-        const COLS = Math.ceil(Math.sqrt(MAX_TILES));
+        const params = new URLSearchParams(location.search);
+
+        // ?pistes=1,2,5  → manual mode: show exactly these pistes, no MQTT
+        // (nothing)       → MQTT auto-discovery via Connection topic
+        // ?tiles=N        → cap maximum tiles in MQTT mode (default 16)
+        const pisteParam = params.get('pistes');
+        const MANUAL_MODE = !!pisteParam;
+        const MAX_CAP = Math.max(1, parseInt(params.get('tiles')) || 16);
+
         const grid = document.getElementById('grid');
-        const tiles = {}; // id -> {el, iframe}
-        const recentOrder = [];
+        const tiles = {}; // padded-id -> { el, iframe }
 
         function pad(n) { return String(n).padStart(3, '0'); }
 
         function createIframeTile(id) {
-            id = pad(id);
-            if (tiles[id]) return tiles[id];
-
+            if (tiles[id]) return;
             const wrapper = document.createElement('div');
             wrapper.className = 'tile iframe-tile';
             wrapper.id = 'tile_' + id;
@@ -121,45 +122,93 @@
             iframe.style.width = '1920px';
             iframe.style.height = '1080px';
             iframe.style.border = '0';
-            iframe.style.flexShrink = '0';  /* never let a flex parent collapse this */
+            iframe.style.flexShrink = '0'; // never let a flex parent collapse the height
             iframe.style.transformOrigin = '0 0';
             iframe.style.display = 'block';
 
             wrapper.addEventListener('click', () => window.open(`/piste/${id}`, '_blank'));
             wrapper.appendChild(iframe);
-
-            if (recentOrder.length >= MAX_TILES) {
-                const oldest = recentOrder.shift();
-                const node = document.getElementById('tile_' + oldest);
-                if (node) node.remove();
-                delete tiles[oldest];
-            }
-
-            grid.appendChild(wrapper);
-            recentOrder.push(id);
             tiles[id] = { el: wrapper, iframe };
-            return tiles[id];
+        }
+
+        function rebuildGrid() {
+            // Re-append all tiles in sorted (numerical) order
+            Object.keys(tiles).sort().forEach(id => grid.appendChild(tiles[id].el));
+            rescaleAll();
+        }
+
+        function addPiste(rawId) {
+            const id = pad(rawId);
+            if (tiles[id]) return;
+            if (Object.keys(tiles).length >= MAX_CAP) return;
+            createIframeTile(id);
+            rebuildGrid();
+        }
+
+        function removePiste(rawId) {
+            const id = pad(rawId);
+            if (!tiles[id]) return;
+            tiles[id].el.remove();
+            delete tiles[id];
+            rebuildGrid();
         }
 
         function rescaleAll() {
+            const count = Object.keys(tiles).length;
+            if (count === 0) return;
+            const cols = Math.ceil(Math.sqrt(count));
             const viewW = document.documentElement.clientWidth;
-            const padding = 12;
-            const gap = 12;
-            const colW = Math.floor((viewW - 2 * padding - (COLS - 1) * gap) / COLS);
+            const padding = 12, gap = 12;
+            const colW = Math.floor((viewW - 2 * padding - (cols - 1) * gap) / cols);
             if (colW <= 0) return;
             const scale = colW / 1920;
             const tileH = Math.round(1080 * scale);
-            grid.style.gridTemplateColumns = `repeat(${COLS}, ${colW}px)`;
-            Object.keys(tiles).forEach(id => {
-                const t = tiles[id]; if (!t) return;
+            grid.style.gridTemplateColumns = `repeat(${cols}, ${colW}px)`;
+            Object.values(tiles).forEach(t => {
                 t.el.style.width = colW + 'px';
                 t.el.style.height = tileH + 'px';
                 t.iframe.style.transform = `scale(${scale})`;
             });
         }
 
-        // create all tiles so the grid lays them out correctly before first paint
-        for (let i = 1; i <= MAX_TILES; i++) createIframeTile(i);
+        if (MANUAL_MODE) {
+            // Parse comma-separated list, e.g. ?pistes=1,2,5,007
+            pisteParam.split(',')
+                .map(s => parseInt(s.trim(), 10))
+                .filter(n => !isNaN(n) && n > 0)
+                .slice(0, MAX_CAP)
+                .forEach(n => addPiste(n));
+        } else {
+            // MQTT auto-discovery:
+            // Subscribe to MQTT_Cyrano/+/Connection.
+            // The broker sends retained messages for every known piste on connect,
+            // so the grid populates automatically without any manual configuration.
+            // payload "offline" → remove tile;  anything else → add tile.
+            const useSSL = location.protocol === 'https:';
+            const port = useSSL ? 9002 : 9001;
+            const client = new Paho.MQTT.Client(
+                location.hostname, port, 'overview_' + Date.now());
+
+            client.onMessageArrived = (msg) => {
+                // topic format: MQTT_Cyrano/Piste_001/Connection
+                const parts = msg.destinationName.split('/');
+                if (parts.length < 3 || parts[2] !== 'Connection') return;
+                const m = parts[1].match(/(\d+)$/);
+                if (!m) return;
+                const num = parseInt(m[1], 10);
+                if (msg.payloadString.trim().toLowerCase() === 'offline') {
+                    removePiste(num);
+                } else {
+                    addPiste(num);
+                }
+            };
+
+            client.connect({
+                useSSL,
+                onSuccess: () => client.subscribe('MQTT_Cyrano/+/Connection'),
+                onFailure: (err) => console.error('MQTT connect failed:', err)
+            });
+        }
 
         rescaleAll();
         new ResizeObserver(rescaleAll).observe(document.documentElement);
@@ -175,7 +224,6 @@
         document.addEventListener('fullscreenchange', () => {
             document.getElementById('fullscreen-btn').textContent =
                 document.fullscreenElement ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
-            // re-scale after the viewport changes size
             rescaleAll();
         });
     </script>
