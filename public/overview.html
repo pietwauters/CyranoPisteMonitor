@@ -157,15 +157,23 @@
             const count = Object.keys(tiles).length;
             if (count === 0) return;
             const cols = Math.ceil(Math.sqrt(count));
+            const inFS = !!document.fullscreenElement;
             const viewW = document.documentElement.clientWidth;
-            const padding = 12, gap = 12;
+            const viewH = document.documentElement.clientHeight;
+            const padding = inFS ? 0 : 12, gap = inFS ? 2 : 12;
+            const rows = Math.ceil(count / cols);
             const colW = Math.floor((viewW - 2 * padding - (cols - 1) * gap) / cols);
-            if (colW <= 0) return;
-            const scale = colW / 1920;
+            const rowH = Math.floor((viewH - 2 * padding - (rows - 1) * gap) / rows);
+            const colWbyH = Math.floor(rowH * 1920 / 1080);
+            const effectiveColW = inFS ? Math.min(colW, colWbyH) : colW;
+            if (effectiveColW <= 0) return;
+            const scale = effectiveColW / 1920;
             const tileH = Math.round(1080 * scale);
-            grid.style.gridTemplateColumns = `repeat(${cols}, ${colW}px)`;
+            grid.style.padding = padding + 'px';
+            grid.style.gap = gap + 'px';
+            grid.style.gridTemplateColumns = `repeat(${cols}, ${effectiveColW}px)`;
             Object.values(tiles).forEach(t => {
-                t.el.style.width = colW + 'px';
+                t.el.style.width = effectiveColW + 'px';
                 t.el.style.height = tileH + 'px';
                 t.iframe.style.transform = `scale(${scale})`;
             });
@@ -222,8 +230,8 @@
         }
 
         document.addEventListener('fullscreenchange', () => {
-            document.getElementById('fullscreen-btn').textContent =
-                document.fullscreenElement ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+            const inFS = !!document.fullscreenElement;
+            document.querySelector('.header').style.display = inFS ? 'none' : 'flex';
             rescaleAll();
         });
     </script>
