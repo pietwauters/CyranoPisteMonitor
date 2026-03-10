@@ -4,7 +4,6 @@ const mqtt = require('mqtt');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { execFile } = require('child_process');
 
 const app = express();
 const port = 3000;
@@ -15,253 +14,113 @@ const sslOptions = {
   cert: fs.readFileSync(path.join(__dirname, 'server.cert'))
 };
 
-const PAIRING_FILE = '/var/lib/scoring-broker/pairing.json';
-
-function isPairingEnabled() {
-  try {
-    const data = JSON.parse(fs.readFileSync(PAIRING_FILE, 'utf8'));
-    if (!data.enabled) return false;
-
-    const now = Math.floor(Date.now() / 1000);
-    return data.expiresAt > now;
-  } catch {
-    return false;
-  }
-}
-
-
-// Configure multer for file uploads - use memory storage first
+// -----------------
+// File uploads
+// -----------------
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
-    
-    if (mimetype && extname) {
-      return cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed!'));
-    }
+    cb(mimetype && extname ? null : new Error('Only image files allowed!'), true);
   }
 });
 
-// Admin page route
-app.get('/admin', (req, res) => {
-  res.sendFile(__dirname + '/public/admin.html');
-});
+// -----------------
+// Web pages
+// -----------------
+app.get('/admin', (req, res) => res.sendFile(__dirname + '/public/admin.html'));
+app.get('/piste-mgt', (req, res) => res.sendFile(__dirname + '/public/piste-mgt.html'));
+app.get('/overview', (req, res) => res.sendFile(__dirname + '/public/overview.html'));
+app.get('/piste/:number', (req, res) => res.sendFile(__dirname + '/public/index.html'));
 
-// Piste Management page route
-app.get('/piste-mgt', (req, res) => {
-  res.sendFile(__dirname + '/public/piste-mgt.html');
-});
-
-// Overview page route
-app.get('/overview', (req, res) => {
-  res.sendFile(__dirname + '/public/overview.html');
-});
-
-// Direct piste display route
-app.get('/piste/:number', (req, res) => {
-  res.sendFile(__dirname + '/public/index.html');
-});
-
-// Upload fencer image endpoint
+// -----------------
+// Image upload/delete
+// -----------------
 app.post('/upload-fencer-image', upload.single('image'), (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
-    
-    const pisteNumber = req.body.pisteNumber;
-    const position = req.body.position;
-    
-    if (!pisteNumber || !position) {
-      return res.status(400).json({ error: 'Missing pisteNumber or position' });
-    }
-    
-    // Create directory path
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    const { pisteNumber, position } = req.body;
+    if (!pisteNumber || !position) return res.status(400).json({ error: 'Missing pisteNumber or position' });
+
     const uploadPath = path.join(__dirname, 'public', 'fencers', `piste-${pisteNumber}`);
-    
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    
-    // Determine file extension and create filename
+    if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath, { recursive: true });
+
     const ext = path.extname(req.file.originalname);
     const filename = `${position}${ext}`;
     const filepath = path.join(uploadPath, filename);
-    
-    // Write file to disk
+
     fs.writeFileSync(filepath, req.file.buffer);
-    
+
     res.json({
       success: true,
       message: 'Image uploaded successfully',
-      filename: filename,
+      filename,
       path: `/fencers/piste-${pisteNumber}/${filename}`
     });
-  } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    console.error('Upload error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Delete fencer image endpoint
 app.delete('/delete-fencer-image/:pisteNumber/:position', (req, res) => {
   try {
-    const pisteNumber = req.params.pisteNumber;
-    const position = req.params.position;
-    
+    const { pisteNumber, position } = req.params;
     const dirPath = path.join(__dirname, 'public', 'fencers', `piste-${pisteNumber}`);
-    
-    if (!fs.existsSync(dirPath)) {
-      return res.json({ success: true, message: 'No images to delete' });
-    }
-    
-    // Find and delete any file with the position name (any extension)
-    const files = fs.readdirSync(dirPath);
-    const extensions = ['jpg', 'jpeg', 'png', 'gif'];
+    if (!fs.existsSync(dirPath)) return res.json({ success: true, message: 'No images to delete' });
+
     let deleted = false;
-    
-    files.forEach(file => {
-      const fileBase = path.parse(file).name;
-      if (fileBase === position) {
+    fs.readdirSync(dirPath).forEach(file => {
+      if (path.parse(file).name === position) {
         fs.unlinkSync(path.join(dirPath, file));
         deleted = true;
       }
     });
-    
-    res.json({
-      success: true,
-      message: deleted ? 'Image deleted successfully' : 'No image found'
-    });
-  } catch (error) {
-    console.error('Delete error:', error);
-    res.status(500).json({ error: error.message });
+
+    res.json({ success: true, message: deleted ? 'Image deleted successfully' : 'No image found' });
+  } catch (err) {
+    console.error('Delete error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Serve static files (HTML/CSS/JS) - must come after specific routes
+// -----------------
+// Mount enrolment API
+// -----------------
+app.use(express.json()); // JSON parser
+const enrolmentRouter = require('./enrolment');
+app.use('/api', enrolmentRouter);
+
+// -----------------
+// Serve static files
+// -----------------
 app.use(express.static('public'));
 
-// MQTT Client Configuration
-// Prefer secure MQTT (MQTTS) on 8883. If your broker uses plain MQTT on 1883,
-// set the MQTT_BROKER env var or the code will attempt a fallback.
+// -----------------
+// MQTT
+// -----------------
 const mqttBroker = process.env.MQTT_BROKER || 'mqtts://localhost:8883';
-const mqttOptions = {
-  // Allow self-signed certs for local deployments. For production, provide
-  // the CA via `ca: fs.readFileSync('/path/to/ca.crt')` and set
-  // `rejectUnauthorized: true`.
-  rejectUnauthorized: false
-};
+let client = mqtt.connect(mqttBroker, { rejectUnauthorized: false });
 
-let client = mqtt.connect(mqttBroker, mqttOptions);
-
-client.on('connect', () => {
-  console.log('Connected to MQTT broker at', mqttBroker);
-});
-
+client.on('connect', () => console.log('Connected to MQTT broker at', mqttBroker));
 client.on('error', (err) => {
-  console.error('MQTT client error:', err && err.message ? err.message : err);
-  // If the initial attempt was MQTTS and was refused, try plain MQTT on 1883 once
+  console.error('MQTT error:', err && err.message ? err.message : err);
   if (mqttBroker.startsWith('mqtts://')) {
     const fallback = 'mqtt://localhost:1883';
-    console.log('Attempting fallback to', fallback);
-    try {
-      client.end(true);
-    } catch (e) {}
+    client.end(true);
     client = mqtt.connect(fallback);
     client.on('connect', () => console.log('Connected to MQTT broker at', fallback));
     client.on('error', (e) => console.error('MQTT fallback error:', e && e.message ? e.message : e));
   }
 });
 
-
-// === Enrolment / Pairing ===
-//const ENROLMENT_CA = '/var/lib/scoring-broker/ca';
-//const ENROLMENT_DEVICES = '/var/lib/scoring-broker/devices';
-const ENROLMENT_CA = '/home/atlas/scoring-broker/ca';
-const ENROLMENT_DEVICES = '/home/atlas/scoring-broker/devices';
-
-
-// Add JSON body parsing (required for POST /enrol)
-app.use(express.json());
-
-// Pairing state
-let pairingEnabled = false;
-
-// Enable pairing endpoint (protected by optional PIN)
-app.post('/api/pairing/enable', (req, res) => {
-  const { execFile } = require('child_process');
-
-  execFile('/usr/local/bin/enable-pairing.sh', (err) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).send('Failed to enable pairing');
-    }
-    res.send('Pairing enabled for 2 minutes');
-  });
-});
-
-
-// Device enrolment endpoint
-app.post('/api/enrol', (req, res) => {
-   if (!isPairingEnabled()) {
-    return res.status(403).send('Pairing disabled');
-  }
-
-  const { deviceId, csrPem } = req.body;
-  if (!deviceId || !csrPem) {
-    return res.status(400).send('Missing parameters');
-  }
-
-  const csrFile = path.join('/tmp', `${deviceId}.csr`);
-  const certFile = path.join(ENROLMENT_DEVICES, `${deviceId}.crt`);
-
-  try {
-    // Write CSR to temp file
-    fs.writeFileSync(csrFile, csrPem);
-  } catch (err) {
-    console.error('Failed to write CSR:', err);
-    return res.status(500).send('Failed to write CSR');
-  }
-
-  // Sign CSR using privileged helper
-  execFile(
-    'sudo',
-    ['/usr/local/bin/sign-device-cert.sh', csrFile, certFile],
-    (error, stdout, stderr) => {
-      if (error) {
-        console.error('Signing failed:', stderr || error);
-        return res.status(500).send('Failed to sign certificate');
-      }
-
-      try {
-        // Cleanup CSR
-        fs.unlinkSync(csrFile);
-
-        // Return signed certificate
-        const certPem = fs.readFileSync(certFile, 'utf8');
-        res.json({
-  deviceCert: certPem,
-  caCert: fs.readFileSync(`${ENROLMENT_CA}/ca.crt`, 'utf8')
-});
-
-        console.log(`Device ${deviceId} enrolled successfully`);
-      } catch (err) {
-        console.error('Post-signing error:', err);
-        res.status(500).send('Failed after signing');
-      }
-    }
-  );
-});
-
-
-// Start the HTTPS server
+// -----------------
+// Start HTTPS
+// -----------------
 https.createServer(sslOptions, app).listen(port, () => {
   console.log(`Server running at https://localhost:${port}`);
-  console.log(`Also accessible at https://10.154.1.102:${port}`);
 });
