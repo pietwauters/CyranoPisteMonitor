@@ -1,113 +1,95 @@
-// enrolment.js
-const express = require('express');
-const fs = require('fs');
-const path = require('path');
-const { execFile } = require('child_process');
+const express = require("express");
+const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
+const { execFileSync } = require("child_process");
 
 const router = express.Router();
 
-// Paths for enrolment
-const ENROLMENT_CA = '/home/atlas/scoring-broker/ca';
-const ENROLMENT_DEVICES = '/home/atlas/scoring-broker/devices';
-const PAIRING_FILE = '/var/lib/scoring-broker/pairing.json';
+const CA_DIR = "/home/atlas/scoring-broker/ca";
+const DEVICES_DIR = "/home/atlas/scoring-broker/devices";
 
-// Helper to check if pairing is enabled
-function isPairingEnabled() {
-  try {
-    const data = JSON.parse(fs.readFileSync(PAIRING_FILE, 'utf8'));
-    if (!data.enabled) return false;
-    const now = Math.floor(Date.now() / 1000);
-    return data.expiresAt > now;
-  } catch (err) {
-    console.warn('Failed to read pairing file:', err.message);
-    return false;
-  }
+let pairing = {
+  enabled: false,
+  code: null,
+  expires: 0
+};
+
+function isPairingValid() {
+  return pairing.enabled && Date.now() < pairing.expires;
 }
 
-// =====================
-// Pairing Endpoint
-// =====================
-router.post('/pairing/enable', (req, res) => {
-  console.log('Received request to enable pairing');
+function hmacSha256(key, msg) {
+  return crypto.createHmac("sha256", key).update(msg).digest("hex");
+}
 
-  execFile('/usr/local/bin/enable-pairing.sh', (err) => {
-    if (err) {
-      console.error('Error enabling pairing:', err.message);
-      return res.status(500).send(`Failed to enable pairing: ${err.message}`);
-    }
-    console.log('Pairing enabled for 2 minutes');
-    res.send('Pairing enabled for 2 minutes');
-  });
+router.post("/pairing/enable", express.json(), (req, res) => {
+  const { pairingCode } = req.body;
+
+  if (!pairingCode) {
+    return res.status(400).send("Missing pairingCode");
+  }
+
+  pairing.enabled = true;
+  pairing.code = pairingCode;
+  pairing.expires = Date.now() + 120000;
+
+  console.log("Pairing enabled with code:", pairingCode);
+
+  res.send("Pairing enabled for 2 minutes");
 });
 
-// =====================
-// Device Enrolment Endpoint
-// =====================
-router.post('/enrol', (req, res) => {
-  console.log('Received enrolment request');
+router.post("/enrol", express.json({ limit: "10kb" }), (req, res) => {
 
-  if (!isPairingEnabled()) {
-    console.warn('Pairing disabled. Rejecting enrolment.');
-    return res.status(403).send('Pairing disabled');
+  if (!isPairingValid()) {
+    return res.status(403).send("Pairing not enabled or expired");
   }
 
-  const { deviceId, csrPem } = req.body;
+  const { deviceId, csrPem, auth } = req.body;
 
-  if (!deviceId || !csrPem) {
-    console.warn('Missing parameters in enrol request:', req.body);
-    return res.status(400).send('Missing parameters: deviceId or csrPem');
+  if (!deviceId || !csrPem || !auth) {
+    return res.status(400).send("Missing parameters");
   }
 
-  const csrFile = path.join('/tmp', `${deviceId}.csr`);
-  const certFile = path.join(ENROLMENT_DEVICES, `${deviceId}.crt`);
+  const msg = deviceId + csrPem;
 
-  console.log('CSR file will be written to:', csrFile);
-  console.log('Device certificate will be stored at:', certFile);
+  const expected = hmacSha256(pairing.code, msg);
+
+  if (expected !== auth) {
+    console.log("HMAC mismatch");
+    return res.status(403).send("Authentication failed");
+  }
+
+  console.log("HMAC verified for device:", deviceId);
+
+  const csrPath = `/tmp/${deviceId}.csr`;
+  const certPath = path.join(DEVICES_DIR, `${deviceId}.crt`);
+
+  fs.writeFileSync(csrPath, csrPem);
 
   try {
-    fs.writeFileSync(csrFile, csrPem);
-    console.log(`CSR written successfully for device ${deviceId}`);
+
+    execFileSync("/usr/local/bin/sign-device-cert.sh", [
+      csrPath,
+      certPath
+    ]);
+
   } catch (err) {
-    console.error('Failed to write CSR:', err.message);
-    return res.status(500).send(`Failed to write CSR: ${err.message}`);
+
+    console.error("Signing failed:", err);
+    return res.status(500).send("Signing failed");
   }
 
-  // Sign CSR using helper script
-  execFile(
-    'sudo',
-    ['/usr/local/bin/sign-device-cert.sh', csrFile, certFile],
-    (error, stdout, stderr) => {
-      console.log('Signing script stdout:', stdout);
-      console.log('Signing script stderr:', stderr);
+  const deviceCert = fs.readFileSync(certPath, "utf8");
+  const caCert = fs.readFileSync(path.join(CA_DIR, "ca.crt"), "utf8");
 
-      if (error) {
-        console.error('Signing failed:', error.message);
-        return res.status(500).send(`Failed to sign certificate: ${error.message}`);
-      }
+  pairing.enabled = false;
 
-      try {
-        // Cleanup CSR
-        fs.unlinkSync(csrFile);
-        console.log('CSR file deleted after signing');
+  res.json({
+    deviceCert,
+    caCert
+  });
 
-        // Read signed certificate
-        const certPem = fs.readFileSync(certFile, 'utf8');
-        const caPem = fs.readFileSync(path.join(ENROLMENT_CA, 'ca.crt'), 'utf8');
-
-        console.log(`Device ${deviceId} enrolled successfully`);
-        console.log('Returned certificate length:', certPem.length);
-        console.log('CA certificate length:', caPem.length);
-
-        res.json({
-          deviceCert: certPem,
-          caCert: caPem
-        });
-      } catch (err) {
-        console.error('Post-signing error:', err.message);
-        res.status(500).send(`Failed after signing: ${err.message}`);
-      }
-    }
-  );
 });
 
 module.exports = router;
