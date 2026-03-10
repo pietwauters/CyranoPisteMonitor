@@ -15,19 +15,6 @@ const sslOptions = {
   cert: fs.readFileSync(path.join(__dirname, 'server.cert'))
 };
 
-const PAIRING_FILE = '/var/lib/scoring-broker/pairing.json';
-
-function isPairingEnabled() {
-  try {
-    const data = JSON.parse(fs.readFileSync(PAIRING_FILE, 'utf8'));
-    if (!data.enabled) return false;
-
-    const now = Math.floor(Date.now() / 1000);
-    return data.expiresAt > now;
-  } catch {
-    return false;
-  }
-}
 
 
 // Configure multer for file uploads - use memory storage first
@@ -143,6 +130,8 @@ app.delete('/delete-fencer-image/:pisteNumber/:position', (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+const enrolmentRouter = require('./enrolment');
+app.use('/api', enrolmentRouter);
 
 // Serve static files (HTML/CSS/JS) - must come after specific routes
 app.use(express.static('public'));
@@ -179,85 +168,6 @@ client.on('error', (err) => {
   }
 });
 
-
-// === Enrolment / Pairing ===
-//const ENROLMENT_CA = '/var/lib/scoring-broker/ca';
-//const ENROLMENT_DEVICES = '/var/lib/scoring-broker/devices';
-const ENROLMENT_CA = '/home/atlas/scoring-broker/ca';
-const ENROLMENT_DEVICES = '/home/atlas/scoring-broker/devices';
-
-
-// Add JSON body parsing (required for POST /enrol)
-app.use(express.json());
-
-// Pairing state
-let pairingEnabled = false;
-
-// Enable pairing endpoint (protected by optional PIN)
-app.post('/api/pairing/enable', (req, res) => {
-  const { execFile } = require('child_process');
-
-  execFile('/usr/local/bin/enable-pairing.sh', (err) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).send('Failed to enable pairing');
-    }
-    res.send('Pairing enabled for 2 minutes');
-  });
-});
-
-
-// Device enrolment endpoint
-app.post('/api/enrol', (req, res) => {
-   if (!isPairingEnabled()) {
-    return res.status(403).send('Pairing disabled');
-  }
-
-  const { deviceId, csrPem } = req.body;
-  if (!deviceId || !csrPem) {
-    return res.status(400).send('Missing parameters');
-  }
-
-  const csrFile = path.join('/tmp', `${deviceId}.csr`);
-  const certFile = path.join(ENROLMENT_DEVICES, `${deviceId}.crt`);
-
-  try {
-    // Write CSR to temp file
-    fs.writeFileSync(csrFile, csrPem);
-  } catch (err) {
-    console.error('Failed to write CSR:', err);
-    return res.status(500).send('Failed to write CSR');
-  }
-
-  // Sign CSR using privileged helper
-  execFile(
-    'sudo',
-    ['/usr/local/bin/sign-device-cert.sh', csrFile, certFile],
-    (error, stdout, stderr) => {
-      if (error) {
-        console.error('Signing failed:', stderr || error);
-        return res.status(500).send('Failed to sign certificate');
-      }
-
-      try {
-        // Cleanup CSR
-        fs.unlinkSync(csrFile);
-
-        // Return signed certificate
-        const certPem = fs.readFileSync(certFile, 'utf8');
-        res.json({
-  deviceCert: certPem,
-  caCert: fs.readFileSync(`${ENROLMENT_CA}/ca.crt`, 'utf8')
-});
-
-        console.log(`Device ${deviceId} enrolled successfully`);
-      } catch (err) {
-        console.error('Post-signing error:', err);
-        res.status(500).send('Failed after signing');
-      }
-    }
-  );
-});
 
 
 // Start the HTTPS server
