@@ -70,6 +70,29 @@ router.post("/pair/start", express.json(), (req, res) => {
 });
 
 // ====================
+// ESP: Operator to confirm pairing code
+// ====================
+router.post("/pair/confirm", express.json(), (req, res) => {
+
+  const { pairingCode } = req.body;
+
+  if (!pairing.deviceId) {
+    return res.status(400).send("No device waiting for pairing");
+  }
+
+  if (pairingCode !== pairing.code) {
+    console.log("[PAIRING] Operator entered wrong code");
+    return res.status(403).send("Invalid pairing code");
+  }
+
+  pairing.confirmed = true;
+
+  console.log("[PAIRING] Operator confirmed device:", pairing.deviceId);
+
+  res.send("Pairing confirmed");
+});
+
+// ====================
 // ESP: Enrol device
 // ====================
 router.post("/enrol", express.json({ limit: "10kb" }), (req, res) => {
@@ -86,7 +109,9 @@ router.post("/enrol", express.json({ limit: "10kb" }), (req, res) => {
     console.log("[ENROL] Missing parameters in request body");
     return res.status(400).send("Missing parameters");
   }
-
+if (!pairing.confirmed) {
+  return res.status(403).send("Pairing not confirmed by operator");
+}
   // ESP pairing code is generated locally by the device
   // HMAC is computed using (deviceId + csrPem)
   const expectedHmac = hmacSha256(pairing.code, deviceId + csrPem + pairing.challenge);
