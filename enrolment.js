@@ -89,7 +89,7 @@ router.post("/enrol", express.json({ limit: "10kb" }), (req, res) => {
 
   // ESP pairing code is generated locally by the device
   // HMAC is computed using (deviceId + csrPem)
-  const expectedHmac = hmacSha256(deviceId, csrPem);
+  const expectedHmac = hmacSha256(pairing.code, deviceId + csrPem + pairing.challenge);
 
   if (expectedHmac !== auth) {
     console.log("[ENROL] HMAC mismatch for device:", deviceId);
