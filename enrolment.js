@@ -9,6 +9,8 @@ const router = express.Router();
 const CA_DIR = "/home/atlas/scoring-broker/ca";
 const DEVICES_DIR = "/home/atlas/scoring-broker/devices";
 
+
+
 // === Pairing state ===
 let pairing = {
   enabled: false,
@@ -16,6 +18,11 @@ let pairing = {
   challenge: null,
   deviceId: null
 };
+
+// HMAC helper
+function hmacSha256(key, msg) {
+  return crypto.createHmac("sha256", key).update(msg).digest("hex");
+}
 
 function isPairingValid() {
   if (!pairing.enabled) return false;
@@ -95,5 +102,6 @@ router.post("/enrol", express.json({ limit: "10kb" }), (req, res) => {
 
   res.json({ deviceCert, caCert });
 });
+
 
 module.exports = router;
