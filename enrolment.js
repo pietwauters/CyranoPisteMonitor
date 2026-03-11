@@ -17,7 +17,17 @@ let pairing = {
 
 // Utility: is pairing window still valid
 function isPairingValid() {
-  return pairing.enabled && Date.now() < pairing.expires;
+  if (!pairing.enabled) return false;
+
+  if (Date.now() > pairing.expires) {
+    pairing.enabled = false;
+    pairing.confirmed = false;
+    pairing.code = null;
+    pairing.challenge = null;
+    return false;
+  }
+
+  return true;
 }
 
 // HMAC helper
@@ -126,7 +136,8 @@ if (!pairing.confirmed) {
   // Paths for CSR and signed cert
   const csrPath = `/tmp/${deviceId}.csr`;
   const certPath = path.join(DEVICES_DIR, `${deviceId}.crt`);
-
+// CLEAR PAIRING STATE
+pairing.confirmed = false;
   // Write CSR to temp file
   fs.writeFileSync(csrPath, csrPem);
   console.log(`[ENROL] CSR written to ${csrPath}`);
@@ -146,6 +157,11 @@ if (!pairing.confirmed) {
 
   // Disable pairing window after successful enrolment
   pairing.enabled = false;
+pairing.code = null;
+pairing.challenge = null;
+pairing.deviceId = null;
+pairing.confirmed = false;
+pairing.expires = 0;
   console.log("[PAIRING] Pairing disabled after enrolment of", deviceId);
 
   res.json({
