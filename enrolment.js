@@ -23,18 +23,11 @@ function hmacSha256(key, msg) {
   return crypto.createHmac("sha256", key).update(msg).digest("hex");
 }
 
-router.post("/pairing/enable", express.json(), (req, res) => {
-  const { pairingCode } = req.body;
+router.post("/pairing/enable", (req, res) => {
+  pairingEnabled = true;
+  pairingExpires = Date.now() + 2 * 60 * 1000;
 
-  if (!pairingCode) {
-    return res.status(400).send("Missing pairingCode");
-  }
-
-  pairing.enabled = true;
-  pairing.code = pairingCode;
-  pairing.expires = Date.now() + 120000;
-
-  console.log("Pairing enabled with code:", pairingCode);
+  console.log("Pairing enabled for 2 minutes");
 
   res.send("Pairing enabled for 2 minutes");
 });
