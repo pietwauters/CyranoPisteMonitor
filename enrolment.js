@@ -24,13 +24,38 @@ function hmacSha256(key, msg) {
 }
 
 router.post("/pairing/enable", (req, res) => {
-  pairingEnabled = true;
-  pairingExpires = Date.now() + 2 * 60 * 1000;
+  pairing.enabled = true;
+  pairing.expires = Date.now() + 2 * 60 * 1000;
+  pairing.code = null; // will be set by device
 
   console.log("Pairing enabled for 2 minutes");
-
   res.send("Pairing enabled for 2 minutes");
 });
+
+const pairingChallenges = {};
+
+router.post("/pair/start", express.json({ limit: "2kb" }), (req, res) => {
+  if (!pairing.enabled || Date.now() > pairing.expires) {
+    return res.status(403).send("Pairing not enabled or expired");
+  }
+
+  const { deviceId, pairingCode } = req.body;
+  if (!deviceId || !pairingCode) {
+    return res.status(400).send("Missing deviceId or pairingCode");
+  }
+
+  // Store the ESP pairing code for HMAC
+  pairing.code = pairingCode;
+
+  // Generate a challenge for the ESP
+  const challenge = crypto.randomBytes(6).toString("hex"); // 12 hex chars
+  pairingChallenges[deviceId] = challenge;
+
+  console.log(`Device ${deviceId} requested pairing with code ${pairingCode}, challenge=${challenge}`);
+
+  res.json({ challenge });
+});
+
 
 router.post("/enrol", express.json({ limit: "10kb" }), (req, res) => {
 
