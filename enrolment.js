@@ -9,105 +9,97 @@ const router = express.Router();
 const CA_DIR = "/home/atlas/scoring-broker/ca";
 const DEVICES_DIR = "/home/atlas/scoring-broker/devices";
 
+// === Pairing state ===
 let pairing = {
   enabled: false,
-  code: null,
   expires: 0
 };
 
+// Utility: is pairing window still valid
 function isPairingValid() {
   return pairing.enabled && Date.now() < pairing.expires;
 }
 
+// HMAC helper
 function hmacSha256(key, msg) {
   return crypto.createHmac("sha256", key).update(msg).digest("hex");
 }
 
+// ====================
+// Operator-only: Enable pairing
+// Accept requests only from localhost
+// ====================
 router.post("/pairing/enable", (req, res) => {
-  pairing.enabled = true;
-  pairing.expires = Date.now() + 2 * 60 * 1000;
-  pairing.code = null; // will be set by device
+  const ip = req.ip || req.connection.remoteAddress;
+  if (!ip.startsWith("127.") && ip !== "::1") {
+    return res.status(403).send("Forbidden: operator-only endpoint");
+  }
 
-  console.log("Pairing enabled for 2 minutes");
+  pairing.enabled = true;
+  pairing.expires = Date.now() + 2 * 60 * 1000; // 2 min window
+  console.log("[PAIRING] Enabled for 2 minutes by operator from", ip);
+
   res.send("Pairing enabled for 2 minutes");
 });
 
-const pairingChallenges = {};
-
-router.post("/pair/start", express.json({ limit: "2kb" }), (req, res) => {
-  if (!pairing.enabled || Date.now() > pairing.expires) {
-    return res.status(403).send("Pairing not enabled or expired");
-  }
-
-  const { deviceId, pairingCode } = req.body;
-  if (!deviceId || !pairingCode) {
-    return res.status(400).send("Missing deviceId or pairingCode");
-  }
-
-  // Store the ESP pairing code for HMAC
-  pairing.code = pairingCode;
-
-  // Generate a challenge for the ESP
-  const challenge = crypto.randomBytes(6).toString("hex"); // 12 hex chars
-  pairingChallenges[deviceId] = challenge;
-
-  console.log(`Device ${deviceId} requested pairing with code ${pairingCode}, challenge=${challenge}`);
-
-  res.json({ challenge });
-});
-
-
+// ====================
+// ESP: Enrol device
+// ====================
 router.post("/enrol", express.json({ limit: "10kb" }), (req, res) => {
+  console.log("[ENROL] Received enrol request");
 
   if (!isPairingValid()) {
+    console.log("[ENROL] Pairing window not enabled or expired");
     return res.status(403).send("Pairing not enabled or expired");
   }
 
   const { deviceId, csrPem, auth } = req.body;
 
   if (!deviceId || !csrPem || !auth) {
+    console.log("[ENROL] Missing parameters in request body");
     return res.status(400).send("Missing parameters");
   }
 
-  const msg = deviceId + csrPem;
+  // ESP pairing code is generated locally by the device
+  // HMAC is computed using (deviceId + csrPem)
+  const expectedHmac = hmacSha256(deviceId, csrPem);
 
-  const expected = hmacSha256(pairing.code, msg);
-
-  if (expected !== auth) {
-    console.log("HMAC mismatch");
+  if (expectedHmac !== auth) {
+    console.log("[ENROL] HMAC mismatch for device:", deviceId);
     return res.status(403).send("Authentication failed");
   }
 
-  console.log("HMAC verified for device:", deviceId);
+  console.log("[ENROL] HMAC verified for device:", deviceId);
 
+  // Paths for CSR and signed cert
   const csrPath = `/tmp/${deviceId}.csr`;
   const certPath = path.join(DEVICES_DIR, `${deviceId}.crt`);
 
+  // Write CSR to temp file
   fs.writeFileSync(csrPath, csrPem);
+  console.log(`[ENROL] CSR written to ${csrPath}`);
 
+  // Sign device certificate
   try {
-
-    execFileSync("/usr/local/bin/sign-device-cert.sh", [
-      csrPath,
-      certPath
-    ]);
-
+    execFileSync("/usr/local/bin/sign-device-cert.sh", [csrPath, certPath]);
+    console.log(`[ENROL] Certificate signed at ${certPath}`);
   } catch (err) {
-
-    console.error("Signing failed:", err);
+    console.error("[ENROL] Signing failed:", err);
     return res.status(500).send("Signing failed");
   }
 
+  // Read signed certificate and CA
   const deviceCert = fs.readFileSync(certPath, "utf8");
   const caCert = fs.readFileSync(path.join(CA_DIR, "ca.crt"), "utf8");
 
+  // Disable pairing window after successful enrolment
   pairing.enabled = false;
+  console.log("[PAIRING] Pairing disabled after enrolment of", deviceId);
 
   res.json({
     deviceCert,
     caCert
   });
-
 });
 
 module.exports = router;
