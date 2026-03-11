@@ -85,48 +85,32 @@ router.post("/pair/start", express.json(), (req, res) => {
     return res.status(400).send("Missing parameters");
   }
 
-  // Prevent multiple devices during one session
-  if (pairing.deviceId && pairing.deviceId !== deviceId) {
-    console.log("[PAIRING] Another device already pairing:", pairing.deviceId);
-    return res.status(403).send("Another device is currently pairing");
+  if (!pairing.deviceId) {
+    console.log("[PAIRING] Pair start request from", deviceId);
+    console.log("[PAIRING] Device pairing code:", pairingCode);
+
+    pairing.deviceId = deviceId;
+    pairing.code = pairingCode;
   }
 
-  console.log("[PAIRING] Pair start request from", deviceId);
-  console.log("[PAIRING] Device pairing code:", pairingCode);
+  // If operator has confirmed, return challenge
+  if (pairing.confirmed && pairing.challenge) {
+    return res.json({ challenge: pairing.challenge });
+  }
 
-  pairing.deviceId = deviceId;
-  pairing.code = pairingCode;
-
-  const challenge = crypto.randomBytes(16).toString("hex");
-  pairing.challenge = challenge;
-
-  res.json({ challenge });
+  // otherwise tell ESP to wait
+  res.json({ status: "waiting_for_operator" });
 });
-
 //
 // ====================
 // Operator: Confirm pairing code
 // ====================
 router.post("/pair/confirm", express.json(), (req, res) => {
 
-  const ip = req.ip || req.connection.remoteAddress;
-
-  if (!ip.startsWith("127.") && ip !== "::1") {
-    return res.status(403).send("Forbidden: operator-only endpoint");
-  }
-
-  if (!isPairingValid()) {
-    return res.status(403).send("Pairing window expired");
-  }
+  const { pairingCode } = req.body;
 
   if (!pairing.deviceId) {
     return res.status(400).send("No device waiting for pairing");
-  }
-
-  const { pairingCode } = req.body;
-
-  if (!pairingCode) {
-    return res.status(400).send("Missing pairingCode");
   }
 
   if (pairingCode !== pairing.code) {
@@ -136,7 +120,10 @@ router.post("/pair/confirm", express.json(), (req, res) => {
 
   pairing.confirmed = true;
 
+  pairing.challenge = crypto.randomBytes(16).toString("hex");
+
   console.log("[PAIRING] Operator confirmed device:", pairing.deviceId);
+  console.log("[PAIRING] Challenge generated");
 
   res.send("Pairing confirmed");
 });
