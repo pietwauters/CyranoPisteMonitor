@@ -42,6 +42,33 @@ router.post("/pairing/enable", (req, res) => {
   res.send("Pairing enabled for 2 minutes");
 });
 
+router.post("/pair/start", express.json(), (req, res) => {
+
+  if (!isPairingValid()) {
+    return res.status(403).send("Pairing not enabled");
+  }
+
+  const { deviceId, pairingCode } = req.body;
+
+  if (!deviceId || !pairingCode) {
+    return res.status(400).send("Missing parameters");
+  }
+
+  console.log("Pair start request from", deviceId);
+  console.log("Device pairing code:", pairingCode);
+
+  // store pending device
+  pairing.deviceId = deviceId;
+  pairing.code = pairingCode;
+
+  // generate challenge
+  const challenge = crypto.randomBytes(16).toString("hex");
+  pairing.challenge = challenge;
+
+  res.json({ challenge });
+
+});
+
 // ====================
 // ESP: Enrol device
 // ====================
