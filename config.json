@@ -1,0 +1,3 @@
+{
+    "MQTT_BROKER": "mqtts://localhost:8883"
+}

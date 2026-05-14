@@ -103,7 +103,20 @@ app.use(express.static('public'));
 // -----------------
 // MQTT
 // -----------------
-const mqttBroker = process.env.MQTT_BROKER || 'mqtts://localhost:8883';
+
+// Load MQTT broker from config.json if present
+let configBroker = null;
+try {
+  const configPath = path.join(__dirname, 'config.json');
+  if (fs.existsSync(configPath)) {
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    if (config.MQTT_BROKER) configBroker = config.MQTT_BROKER;
+  }
+} catch (e) {
+  console.error('Error reading config.json:', e);
+}
+
+const mqttBroker = configBroker || process.env.MQTT_BROKER || 'mqtts://localhost:8883';
 let client = mqtt.connect(mqttBroker, { rejectUnauthorized: false });
 
 client.on('connect', () => console.log('Connected to MQTT broker at', mqttBroker));
