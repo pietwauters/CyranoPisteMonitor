@@ -180,6 +180,30 @@ const elements = {
 
 let lastLightsOn = false;
 
+// Track if buzzer has played for the current light-on event
+let buzzerPlayed = false;
+
+function checkAndPlayBuzzer() {
+  // Only play in fullscreen and when only one piste is shown
+  if (!isFullscreen) return;
+  // Only if exactly one piste is shown (not overview/embed)
+  if (currentPiste === "" || currentPiste == null) return;
+  // Check if any of the four lights is on
+  const lights = [elements.lights.lColor, elements.lights.rColor, elements.lights.lWhite, elements.lights.rWhite];
+  const anyOn = lights.some(light => light.style.opacity === "1");
+  if (anyOn && !buzzerPlayed) {
+    // Play the buzzer sound
+    if (elements.buzzer && elements.buzzer.src) {
+      elements.buzzer.currentTime = 0;
+      elements.buzzer.play();
+    }
+    buzzerPlayed = true;
+  } else if (!anyOn) {
+    // Reset so it can play again next time
+    buzzerPlayed = false;
+  }
+}
+
 function resetDisplay() {
   elements.leftName.textContent = "";
   elements.rightName.textContent = "";
@@ -205,6 +229,8 @@ function resetDisplay() {
     light.style.opacity = "0.1";
     light.style.boxShadow = "none";
   });
+  // Reset buzzer state
+  buzzerPlayed = false;
 }
 
 function updateDisplay(data) {
@@ -260,6 +286,8 @@ function updateDisplay(data) {
   if (data.hasOwnProperty('RLight')) updateLight(elements.lights.rColor, data.RLight);
   if (data.hasOwnProperty('LWlight')) updateLight(elements.lights.lWhite, data.LWlight);
   if (data.hasOwnProperty('RWlight')) updateLight(elements.lights.rWhite, data.RWlight);
+  // Check and play buzzer if needed
+  checkAndPlayBuzzer();
   if (data.hasOwnProperty('Priority')) {
     const priority = data.Priority || '';
     elements.leftPriority.style.display = 'none';
