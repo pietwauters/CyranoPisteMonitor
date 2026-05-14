@@ -129,7 +129,7 @@ const elements = {
     const ctx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, 44100 * 2, 44100);
     const osc = ctx.createOscillator();
     osc.type = 'sine';
-    osc.frequency.value = 440;
+    osc.frequency.value = 1320;
     osc.connect(ctx.destination);
     osc.start(0);
     osc.stop(2);
