@@ -7,7 +7,7 @@ fi
 set -euo pipefail
 
 ### CONFIG #########################################################
-BROKER_NAME="CyranoBroker"
+BROKER_NAME="openpiste"
 BASE_DIR="/var/lib/scoring-broker"
 CA_DIR="$BASE_DIR/ca"
 BROKER_DIR="$BASE_DIR/broker"
@@ -101,12 +101,12 @@ chmod 600 "$BROKER_DIR/broker.key"
 chmod 640 "$MOSQ_CERT_DIR/"*
 
 ### 7. Mosquitto configuration ####################################
-if ! grep -q "CyranoBroker TLS" "$MOSQ_CONF"; then
+if ! grep -q "openpiste TLS" "$MOSQ_CONF"; then
   echo "==> Updating mosquitto.conf"
 
   cat >> "$MOSQ_CONF" <<'EOF'
 
-##### CyranoBroker TLS ############################################
+##### openpiste TLS ############################################
 listener 8883
 cafile /etc/mosquitto/certs/ca.crt
 certfile /etc/mosquitto/certs/server.crt
