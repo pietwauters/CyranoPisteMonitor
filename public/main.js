@@ -341,19 +341,13 @@ function updateMatch(message) {
 
 function updateUW2F(message) {
   if (elements.uw2fTimer) {
-    const timeStr = message.time || '0:00';
-    elements.uw2fTimer.textContent = timeStr;
+    // Format time from milliseconds - UW2F only needs second resolution
+    const totalSeconds = Math.floor(message.time_ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
     
-    // Parse time and apply color coding
-    const parts = timeStr.split(':');
-    let minutes = 0, seconds = 0;
-    if (parts.length >= 2) {
-      minutes = parseInt(parts[0], 10) || 0;
-      seconds = parseInt(parts[1], 10) || 0;
-    } else {
-      seconds = parseInt(parts[0], 10) || 0;
-    }
-    const totalSeconds = minutes * 60 + seconds;
+    elements.uw2fTimer.textContent = timeStr;
     
     elements.uw2fTimer.classList.remove('uw2f-red', 'uw2f-green', 'uw2f-orange');
     if (totalSeconds < 50) {

@@ -227,8 +227,9 @@ function publishApparatusState(state) {
 }
 
 function publishUW2F(timeMs, leftPCard, rightPCard) {
-  const minutes = Math.floor(timeMs / 60000);
-  const seconds = Math.floor((timeMs % 60000) / 1000);
+  const totalSeconds = Math.floor(timeMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
   const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
   
   publish('uw2f', {
