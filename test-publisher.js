@@ -22,7 +22,10 @@ try {
   if (fs.existsSync(configPath)) {
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
     if (config.MQTT_BROKER) {
-      brokerUrl = config.MQTT_BROKER.replace('mqtts://', 'mqtt://');
+      // Convert mqtts://host:8883 to mqtt://host:1883
+      brokerUrl = config.MQTT_BROKER
+        .replace('mqtts://', 'mqtt://')
+        .replace(':8883', ':1883');
     }
   }
 } catch (e) {
