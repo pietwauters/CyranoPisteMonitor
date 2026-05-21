@@ -92,6 +92,7 @@
     <div class="overview-grid" id="grid"></div>
 
     <script src="/js/mqttws31.min.js"></script>
+    <script src="/js/opp2.js"></script>
     <script>
         const params = new URLSearchParams(location.search);
 
@@ -224,32 +225,40 @@
                 .forEach(n => addPiste(n));
         } else {
             // MQTT auto-discovery:
-            // Subscribe to MQTT_Cyrano/+/Connection.
+            // Subscribe to openpiste/+/apparatus/connection (OPP2 protocol).
             // The broker sends retained messages for every known piste on connect,
             // so the grid populates automatically without any manual configuration.
-            // payload "offline" → remove tile;  anything else → add tile.
+            // {"online": false} → remove tile;  {"online": true} → add tile.
             const useSSL = location.protocol === 'https:';
             const port = useSSL ? 9002 : 9001;
             const client = new Paho.MQTT.Client(
                 location.hostname, port, 'overview_' + Date.now());
 
             client.onMessageArrived = (msg) => {
-                // topic format: MQTT_Cyrano/Piste_001/Connection
-                const parts = msg.destinationName.split('/');
-                if (parts.length < 3 || parts[2] !== 'Connection') return;
-                const m = parts[1].match(/(\d+)$/);
-                if (!m) return;
-                const num = parseInt(m[1], 10);
-                if (msg.payloadString.trim().toLowerCase() === 'offline') {
-                    removePiste(num);
-                } else {
-                    addPiste(num);
+                // topic format: openpiste/{piste_id}/apparatus/connection
+                const topic = OPP2.TopicParser.parse(msg.destinationName);
+                if (!topic || topic.message_type !== OPP2.MessageType.CONNECTION) return;
+
+                try {
+                    const data = JSON.parse(msg.payloadString);
+                    const pisteId = topic.piste_id;
+
+                    if (data.online === false) {
+                        // Try to parse as number, otherwise use as string
+                        const num = /^\d+$/.test(pisteId) ? parseInt(pisteId, 10) : pisteId;
+                        removePiste(num);
+                    } else if (data.online === true) {
+                        const num = /^\d+$/.test(pisteId) ? parseInt(pisteId, 10) : pisteId;
+                        addPiste(num);
+                    }
+                } catch (e) {
+                    console.error('Failed to parse connection message:', e);
                 }
             };
 
             client.connect({
                 useSSL,
-                onSuccess: () => client.subscribe('MQTT_Cyrano/+/Connection'),
+                onSuccess: () => client.subscribe('openpiste/+/apparatus/connection'),
                 onFailure: (err) => console.error('MQTT connect failed:', err)
             });
         }

@@ -548,6 +548,7 @@
     </div>
 
     <script src="/js/mqttws31.min.js"></script>
+    <script src="/js/opp2.js"></script>
     <script>
         let client;
 
@@ -634,7 +635,7 @@
             }
 
             return {
-                pisteNumber: pisteNumber.padStart(3, '0'),
+                pisteNumber: pisteNumber,  // Keep piste ID as entered (no padding)
                 leftName: leftName,
                 leftNationality: leftNationality,
                 rightName: rightName,
@@ -654,44 +655,27 @@
             }
 
             try {
-                const topic = `MQTT_Cyrano/Piste_${data.pisteNumber}/FromSoftware`;
-                //const pisteNum = parseInt(data.pisteNumber, 10).toString();
-                const pisteNum = "";
-                // First, send ACK message
-                const ackPayload = {
-                    Protocol: "EFP1.1",
-                    Com: "ACK",
-                    Piste: pisteNum,
-                    Compe: "1"
-                };
+                // Use OPP2 protocol - publish fencers message
+                const pisteId = data.pisteNumber;
+                const topic = OPP2.TopicParser.build(pisteId, OPP2.Publisher.SOFTWARE, OPP2.MessageType.FENCERS);
 
-                const ackMessage = new Paho.MQTT.Message(JSON.stringify(ackPayload));
-                ackMessage.destinationName = topic;
-                client.send(ackMessage);
+                // Create OPP2 fencers message
+                const payload = OPP2.Serializer.serializeFencers(
+                    data.leftName,
+                    data.leftNationality,
+                    data.rightName,
+                    data.rightNationality,
+                    Date.now() & 0xFFFFFFFF  // Simple sequence number from timestamp
+                );
 
-                console.log('Published ACK to:', topic, 'Payload:', ackPayload);
-                showMessage(`Sending ACK to piste ${data.pisteNumber}...`, 'success');
+                const message = new Paho.MQTT.Message(payload);
+                message.destinationName = topic;
+                message.retained = true;  // Fencers should be retained
+                message.qos = 1;
+                client.send(message);
 
-                // Wait 1 second, then send DISP message
-                setTimeout(() => {
-                    const dispPayload = {
-                        Protocol: "EFP1.1",
-                        Com: "DISP",
-                        Piste: pisteNum,
-                        Compe: "1",
-                        RightName: data.rightName,
-                        RightNat: data.rightNationality,
-                        LeftName: data.leftName,
-                        LeftNat: data.leftNationality
-                    };
-
-                    const dispMessage = new Paho.MQTT.Message(JSON.stringify(dispPayload));
-                    dispMessage.destinationName = topic;
-                    client.send(dispMessage);
-
-                    showMessage(`Data sent to piste ${data.pisteNumber}`, 'success');
-                    console.log('Published DISP to:', topic, 'Payload:', dispPayload);
-                }, 1000);
+                showMessage(`Fencer data sent to piste ${pisteId}`, 'success');
+                console.log('Published fencers to:', topic, 'Payload:', payload);
 
             } catch (error) {
                 showMessage('Failed to send: ' + error.message, 'error');

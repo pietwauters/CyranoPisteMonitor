@@ -1,4 +1,4 @@
-// Extracted from index.html <script> block
+// OPP2 Fencing Display - main.js
 
 let currentPiste = "";
 let displayedPiste = "";
@@ -6,25 +6,63 @@ const useSSL = location.protocol === 'https:';
 const port = useSSL ? 9002 : 9001;
 const client = new Paho.MQTT.Client(location.hostname, port, "fencingDisplay_" + Date.now());
 
+// OPP2 dispatcher and system state
+const dispatcher = new OPP2.Dispatcher();
+const systemState = new OPP2.SystemState();
+dispatcher.setSystemState(systemState);
+
 function getPisteFromURL() {
   const path = window.location.pathname;
-  const match = path.match(/\/piste\/(\d{3})/);
-  return match ? match[1] : null;
+  const match = path.match(/\/piste\/(.+)/);
+  if (match) {
+    // Remove any trailing slashes and return piste ID as-is
+    return match[1].replace(/\/$/, '');
+  }
+  return null;
 }
 
+// OPP2 message handlers
+dispatcher.on(OPP2.MessageType.LIGHTS, (topic, message) => {
+  updateLights(message);
+});
+
+dispatcher.on(OPP2.MessageType.CLOCK, (topic, message) => {
+  updateClock(message);
+});
+
+dispatcher.on(OPP2.MessageType.SCORE, (topic, message) => {
+  updateScore(message);
+});
+
+dispatcher.on(OPP2.MessageType.FENCERS, (topic, message) => {
+  updateFencers(message);
+});
+
+dispatcher.on(OPP2.MessageType.MATCH, (topic, message) => {
+  updateMatch(message);
+});
+
+dispatcher.on(OPP2.MessageType.UW2F, (topic, message) => {
+  updateUW2F(message);
+});
+
+dispatcher.on(OPP2.MessageType.APPARATUS_STATE, (topic, message) => {
+  // Optional: could show visual indicator of apparatus state
+  console.log('Apparatus state:', message.state);
+});
+
+dispatcher.on(OPP2.MessageType.CONNECTION, (topic, message) => {
+  // Optional: could show connection status indicator
+  console.log('Connection:', message.online ? 'online' : 'offline');
+});
+
+dispatcher.onError = (error, topic, detail) => {
+  console.error('OPP2 dispatch error:', error, topic, detail);
+};
+
+// MQTT message handler - dispatch to OPP2
 client.onMessageArrived = (message) => {
-  if (message.destinationName.includes("/FromDevice")) {
-    try {
-      const data = JSON.parse(message.payloadString);
-      if (data.Protocol && data.Protocol === 'EFP2') {
-        updateDisplay({ UW2F_Timer: data.UW2F_Timer });
-      } else {
-        updateDisplay(data);
-      }
-    } catch (e) {
-      console.error("JSON parse error:", e);
-    }
-  }
+  dispatcher.dispatch(message.destinationName, message.payloadString);
 };
 
 function padPisteId(id) {
@@ -45,23 +83,27 @@ if (new URLSearchParams(window.location.search).get('embed') === '1') {
 window.onload = function () {
   const pisteSelect = document.getElementById('piste-select');
   const urlPiste = getPisteFromURL();
+  
+  // Populate piste selector with numbers and allow text entry
   for (let i = 1; i <= 999; i++) {
     const option = document.createElement('option');
-    option.value = i.toString().padStart(3, '0');
-    option.text = `Piste ${option.value}`;
+    option.value = i.toString();
+    option.text = `Piste ${i}`;
     pisteSelect.appendChild(option);
   }
+  
   if (urlPiste) {
     pisteSelect.style.display = 'none';
     document.getElementById('fullscreen-btn').style.top = '2vmin';
     document.getElementById('fullscreen-btn').style.left = '2vmin';
     currentPiste = urlPiste;
+    displayedPiste = urlPiste;
     pisteSelect.value = urlPiste;
     client.connect({
       useSSL: useSSL,
       onSuccess: () => {
-        client.subscribe(`MQTT_Cyrano/Piste_${currentPiste}/#`);
-        document.querySelector('.poolNum').textContent = `Strip_${currentPiste}`;
+        client.subscribe(`openpiste/${currentPiste}/apparatus/#`);
+        document.querySelector('.poolNum').textContent = `Strip ${currentPiste}`;
         loadFencerPhotos();
       },
       onFailure: (err) => console.error("Connection failed:", err)
@@ -80,12 +122,13 @@ document.getElementById('piste-select').addEventListener('change', (e) => {
   const newPiste = e.target.value;
   if (newPiste && newPiste !== currentPiste) {
     if (currentPiste) {
-      client.unsubscribe(`MQTT_Cyrano/Piste_${currentPiste}/#`);
+      client.unsubscribe(`openpiste/${currentPiste}/apparatus/#`);
     }
     currentPiste = newPiste;
-    client.subscribe(`MQTT_Cyrano/Piste_${currentPiste}/#`);
+    displayedPiste = newPiste;
+    client.subscribe(`openpiste/${currentPiste}/apparatus/#`);
     resetDisplay();
-    document.querySelector('.poolNum').textContent = `Strip_${currentPiste}`;
+    document.querySelector('.poolNum').textContent = `Strip ${currentPiste}`;
     loadFencerPhotos();
   }
 });
@@ -212,7 +255,6 @@ function resetDisplay() {
   elements.clock.textContent = "0:00";
   elements.period.textContent = "1";
   elements.leftFlag.style.display = 'none';
-  elements.leftFlag.style.display = 'none';
   elements.rightFlag.style.display = 'none';
   elements.leftFlag.src = '';
   elements.rightFlag.src = '';
@@ -233,78 +275,105 @@ function resetDisplay() {
   buzzerPlayed = false;
 }
 
-function updateDisplay(data) {
-  if (data && data.hasOwnProperty('Piste')) {
-    displayedPiste = String(data.Piste || '').trim();
-    const padded = padPisteId(displayedPiste);
-    if (padded) elements.poolNum.textContent = `Strip_${padded}`;
-    else elements.poolNum.textContent = displayedPiste || elements.poolNum.textContent;
-    applyPisteFrame();
-  }
-  if (data.hasOwnProperty('LeftName')) elements.leftName.textContent = data.LeftName || "";
-  if (data.hasOwnProperty('RightName')) elements.rightName.textContent = data.RightName || "";
-  if (data.hasOwnProperty('Lscore')) elements.leftScore.textContent = String(data.Lscore);
-  if (data.hasOwnProperty('Rscore')) elements.rightScore.textContent = String(data.Rscore);
-  if (data.hasOwnProperty('Stopwatch')) elements.clock.textContent = data.Stopwatch || "0:00";
-  if (data.hasOwnProperty('Round')) elements.period.textContent = data.Round || "1";
-  if (elements.uw2fTimer && data.hasOwnProperty('UW2F_Timer')) {
-    const uw = data.UW2F_Timer;
-    if (uw && uw.time) {
-      const timeStr = uw.time.toString();
-      elements.uw2fTimer.textContent = timeStr;
-      const parts = timeStr.split(':');
-      let minutes = 0, seconds = 0;
-      if (parts.length >= 2) {
-        minutes = parseInt(parts[0], 10) || 0;
-        seconds = parseInt(parts[1], 10) || 0;
-      } else {
-        seconds = parseInt(parts[0], 10) || 0;
-      }
-      const totalSeconds = minutes * 60 + seconds;
-      elements.uw2fTimer.classList.remove('uw2f-red', 'uw2f-green', 'uw2f-orange');
-      if (totalSeconds < 50) {
-        elements.uw2fTimer.classList.add('uw2f-green');
-      } else if (totalSeconds < 60) {
-        elements.uw2fTimer.classList.add('uw2f-orange');
-      } else {
-        elements.uw2fTimer.classList.add('uw2f-red');
-      }
-      elements.uw2fTimer.style.display = 'block';
-    } else {
-      elements.uw2fTimer.textContent = '';
-      elements.uw2fTimer.style.display = 'none';
-      elements.uw2fTimer.classList.remove('uw2f-red', 'uw2f-green', 'uw2f-orange');
-    }
-  }
-  if (data.hasOwnProperty('LRcard')) updateCard(elements.cards.lRed, data.LRcard);
-  if (data.hasOwnProperty('LYcard')) updateCard(elements.cards.lYellow, data.LYcard);
-  if (data.hasOwnProperty('RRcard')) updateCard(elements.cards.rRed, data.RRcard);
-  if (data.hasOwnProperty('RYcard')) updateCard(elements.cards.rYellow, data.RYcard);
-  if (data.hasOwnProperty('LP-card')) updatePCard(elements.cards.lPCard, data['LP-card']);
-  if (data.hasOwnProperty('RP-card')) updatePCard(elements.cards.rPCard, data['RP-card']);
-  if (data.hasOwnProperty('LLight')) updateLight(elements.lights.lColor, data.LLight);
-  if (data.hasOwnProperty('RLight')) updateLight(elements.lights.rColor, data.RLight);
-  if (data.hasOwnProperty('LWlight')) updateLight(elements.lights.lWhite, data.LWlight);
-  if (data.hasOwnProperty('RWlight')) updateLight(elements.lights.rWhite, data.RWlight);
-  // Check and play buzzer if needed
+// OPP2 Message Update Functions
+
+function updateLights(message) {
+  // Left side (red for on-target, white for off-target)
+  updateLight(elements.lights.lColor, message.left.on_target);
+  updateLight(elements.lights.lWhite, message.left.white);
+  
+  // Right side (green for on-target, white for off-target)
+  updateLight(elements.lights.rColor, message.right.on_target);
+  updateLight(elements.lights.rWhite, message.right.white);
+  
   checkAndPlayBuzzer();
-  if (data.hasOwnProperty('Priority')) {
-    const priority = data.Priority || '';
-    elements.leftPriority.style.display = 'none';
-    elements.rightPriority.style.display = 'none';
-    elements.leftPriority.textContent = '';
-    elements.rightPriority.textContent = '';
-    if (priority === 'L') {
-      elements.leftPriority.textContent = 'P';
-      elements.leftPriority.style.display = 'block';
-    } else if (priority === 'R') {
-      elements.rightPriority.textContent = 'P';
-      elements.rightPriority.style.display = 'block';
-    }
-  }
-  if (data.hasOwnProperty('LeftNat')) updateFlag(elements.leftFlag, data.LeftNat);
-  if (data.hasOwnProperty('RightNat')) updateFlag(elements.rightFlag, data.RightNat);
 }
+
+function updateClock(message) {
+  elements.clock.textContent = message.time || "0:00";
+  // Optional: could add visual indicator if clock is running
+}
+
+function updateScore(message) {
+  // Scores
+  elements.leftScore.textContent = String(message.left.score);
+  elements.rightScore.textContent = String(message.right.score);
+  
+  // Cards
+  updateCard(elements.cards.lYellow, message.left.yellow_card ? 1 : 0);
+  updateCard(elements.cards.lRed, message.left.red_cards);
+  updateCard(elements.cards.rYellow, message.right.yellow_card ? 1 : 0);
+  updateCard(elements.cards.rRed, message.right.red_cards);
+  
+  // P-cards (black cards)
+  updatePCard(elements.cards.lPCard, message.left.black_card ? 2 : 0);
+  updatePCard(elements.cards.rPCard, message.right.black_card ? 2 : 0);
+  
+  // Priority
+  elements.leftPriority.style.display = 'none';
+  elements.rightPriority.style.display = 'none';
+  elements.leftPriority.textContent = '';
+  elements.rightPriority.textContent = '';
+  
+  if (message.priority === OPP2.Priority.LEFT) {
+    elements.leftPriority.textContent = 'P';
+    elements.leftPriority.style.display = 'block';
+  } else if (message.priority === OPP2.Priority.RIGHT) {
+    elements.rightPriority.textContent = 'P';
+    elements.rightPriority.style.display = 'block';
+  }
+}
+
+function updateFencers(message) {
+  // Names
+  elements.leftName.textContent = message.left.fencer.name || "";
+  elements.rightName.textContent = message.right.fencer.name || "";
+  
+  // Flags (nationalities)
+  updateFlag(elements.leftFlag, message.left.fencer.nation);
+  updateFlag(elements.rightFlag, message.right.fencer.nation);
+}
+
+function updateMatch(message) {
+  // Round/Period
+  elements.period.textContent = String(message.round || 1);
+}
+
+function updateUW2F(message) {
+  if (elements.uw2fTimer) {
+    const timeStr = message.time || '0:00';
+    elements.uw2fTimer.textContent = timeStr;
+    
+    // Parse time and apply color coding
+    const parts = timeStr.split(':');
+    let minutes = 0, seconds = 0;
+    if (parts.length >= 2) {
+      minutes = parseInt(parts[0], 10) || 0;
+      seconds = parseInt(parts[1], 10) || 0;
+    } else {
+      seconds = parseInt(parts[0], 10) || 0;
+    }
+    const totalSeconds = minutes * 60 + seconds;
+    
+    elements.uw2fTimer.classList.remove('uw2f-red', 'uw2f-green', 'uw2f-orange');
+    if (totalSeconds < 50) {
+      elements.uw2fTimer.classList.add('uw2f-green');
+    } else if (totalSeconds < 60) {
+      elements.uw2fTimer.classList.add('uw2f-orange');
+    } else {
+      elements.uw2fTimer.classList.add('uw2f-red');
+    }
+    elements.uw2fTimer.style.display = 'block';
+    
+    // Update P-cards from UW2F message
+    updatePCard(elements.cards.lPCard, message.left.p_card);
+    updatePCard(elements.cards.rPCard, message.right.p_card);
+  }
+}
+
+// Helper functions
+
+// Helper functions
 
 function updateCard(element, value) {
   element.textContent = value > 0 ? value : "";
@@ -319,15 +388,16 @@ function updatePCard(element, value) {
   if (numValue === 1) {
     element.classList.add('smYellow');
     element.style.visibility = "visible";
-  } else if (numValue === 2) {
+  } else if (numValue === 2 || numValue >= 2) {
     element.classList.add('smRed');
     element.style.visibility = "visible";
   }
 }
 
-function updateLight(element, state) {
-  element.style.opacity = state === "1" ? "1" : "0.1";
-  element.style.boxShadow = state === "1" ? "0 0 15px currentColor" : "none";
+function updateLight(element, isOn) {
+  // isOn is now a boolean from OPP2
+  element.style.opacity = isOn ? "1" : "0.1";
+  element.style.boxShadow = isOn ? "0 0 15px currentColor" : "none";
 }
 
 const fullscreenButton = document.getElementById('fullscreen-btn');
