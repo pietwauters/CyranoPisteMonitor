@@ -441,9 +441,9 @@
 
         <div class="form-section">
             <div class="form-group full-width">
-                <label for="piste-number">Piste Number:</label>
-                <input type="text" id="piste-number" placeholder="001" maxlength="3">
-                <div class="info-text">Enter 3-digit piste number (e.g., 001, 012, 123)</div>
+                <label for="piste-number">Piste ID:</label>
+                <input type="text" id="piste-number" placeholder="e.g., 3, Green, Podium" maxlength="32">
+                <div class="info-text">Enter piste identifier (e.g., 3, 12, Green, Podium)</div>
             </div>
 
             <div class="form-row">
@@ -616,7 +616,7 @@
             const rightNationality = document.getElementById('right-nationality').value.trim().toUpperCase();
 
             if (!pisteNumber) {
-                showMessage('Please enter a piste number', 'error');
+                showMessage('Please enter a piste ID', 'error');
                 return null;
             }
 
@@ -845,11 +845,10 @@
         async function uploadPhoto(position) {
             const pisteNumber = document.getElementById('piste-number').value.trim();
             if (!pisteNumber) {
-                showMessage('Please enter a piste number first', 'error');
+                showMessage('Please enter a piste ID first', 'error');
                 return;
             }
 
-            const paddedPiste = pisteNumber.padStart(3, '0');
             const state = imageState[position];
 
             if (!state.img) {
@@ -908,7 +907,7 @@
             canvas.toBlob(async (blob) => {
                 const formData = new FormData();
                 formData.append('image', blob, 'fencer.jpg');
-                formData.append('pisteNumber', paddedPiste);
+                formData.append('pisteNumber', pisteNumber);
                 formData.append('position', position);
 
                 try {
@@ -933,18 +932,16 @@
         async function removePhoto(position) {
             const pisteNumber = document.getElementById('piste-number').value.trim();
             if (!pisteNumber) {
-                showMessage('Please enter a piste number first', 'error');
+                showMessage('Please enter a piste ID first', 'error');
                 return;
             }
 
-            const paddedPiste = pisteNumber.padStart(3, '0');
-
-            if (!confirm(`Remove ${position} fencer photo for piste ${paddedPiste}?`)) {
+            if (!confirm(`Remove ${position} fencer photo for piste ${pisteNumber}?`)) {
                 return;
             }
 
             try {
-                const response = await fetch(`/delete-fencer-image/${paddedPiste}/${position}`, {
+                const response = await fetch(`/delete-fencer-image/${pisteNumber}/${position}`, {
                     method: 'DELETE'
                 });
 
