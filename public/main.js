@@ -47,8 +47,14 @@ dispatcher.on(OPP2.MessageType.UW2F, (topic, message) => {
 });
 
 dispatcher.on(OPP2.MessageType.APPARATUS_STATE, (topic, message) => {
-  // Optional: could show visual indicator of apparatus state
-  console.log('Apparatus state:', message.state);
+  if (elements.apparatusState) {
+    elements.apparatusState.textContent = message.state || 'W';
+    if (message.state === 'E') {
+      elements.apparatusState.classList.add('state-ending');
+    } else {
+      elements.apparatusState.classList.remove('state-ending');
+    }
+  }
 });
 
 dispatcher.on(OPP2.MessageType.CONNECTION, (topic, message) => {
@@ -164,7 +170,8 @@ const elements = {
   leftPhotoImg: document.querySelector('.left-photo img'),
   rightPhotoImg: document.querySelector('.right-photo img'),
   uw2fTimer: document.getElementById('uw2f-timer'),
-  buzzer: document.getElementById('buzzer-sound')
+  buzzer: document.getElementById('buzzer-sound'),
+  apparatusState: document.querySelector('.apparatus-state')
 };
 
 (function generateBuzzerSound() {
