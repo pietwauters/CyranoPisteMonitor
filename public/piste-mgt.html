@@ -671,7 +671,7 @@
 
                 const message = new Paho.MQTT.Message(payload);
                 message.destinationName = topic;
-                message.retained = true;  // Fencers should be retained
+                message.retained = false;  // Software/remote messages are not retained
                 message.qos = 1;
                 client.send(message);
 
