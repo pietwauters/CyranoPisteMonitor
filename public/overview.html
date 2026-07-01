@@ -55,21 +55,21 @@
         /*
          * iframe tile layout — the key to correct scaling:
          *
-         * The iframe is declared 1920×1080 px. We scale it down with
-         * CSS transform: scale(s) where s = colWidth / 1920.
+         * The iframe is declared 960×540 px (half-HD). We scale it down with
+         * CSS transform: scale(s) where s = colWidth / 960.
          * transform does NOT affect layout, so the iframe still occupies
-         * 1920×1080 in the document flow and overflows the wrapper.
+         * 960×540 in the document flow and overflows the wrapper.
          * overflow:hidden clips it to the visible tile area.
          *
          * CRITICAL: the wrapper must be display:block (not flex).
          * A flex container applies flex-shrink to its children, which
-         * would collapse the iframe's layout height from 1080px to the
-         * tile's visual height (~288px). That makes 1vh inside the iframe
-         * resolve to ~2.9px instead of 10.8px, breaking all vh-based
-         * sizing inside index.html.
+         * would collapse the iframe's layout height from 540px to the
+         * tile's visual height. That makes 1vh inside the iframe
+         * resolve incorrectly, breaking all vh-based sizing inside index.html.
          *
-         * JS sets wrapper width and height to colWidth × (1080/1920*colWidth)
+         * JS sets wrapper width and height to colWidth × (540/960*colWidth)
          * so the grid rows are the right visual size.
+         * 960×540 (not 1920×1080) reduces GPU compositing surface by 4×.
          */
         .tile.iframe-tile {
             display: block;
@@ -126,8 +126,8 @@
             const iframe = document.createElement('iframe');
             iframe.src = `/piste/${id}?embed=1`;
             iframe.setAttribute('frameborder', '0');
-            iframe.style.width = '1920px';
-            iframe.style.height = '1080px';
+            iframe.style.width = '960px';
+            iframe.style.height = '540px';
             iframe.style.border = '0';
             iframe.style.flexShrink = '0'; // never let a flex parent collapse the height
             iframe.style.transformOrigin = '0 0';
@@ -181,8 +181,8 @@
                 const padding = 12, gap = 12;
                 const colW = Math.floor((viewW - 2 * padding - (cols - 1) * gap) / cols);
                 if (colW <= 0) return;
-                const scale = colW / 1920;
-                const tileH = Math.round(1080 * scale);
+                const scale = colW / 960;
+                const tileH = Math.round(540 * scale);
                 grid.style.padding = padding + 'px';
                 grid.style.gap = gap + 'px';
                 grid.style.gridTemplateColumns = `repeat(${cols}, ${colW}px)`;
@@ -200,11 +200,11 @@
                 const padding = inFS ? 0 : 12, gap = inFS ? 2 : 12;
                 const colW = Math.floor((viewW - 2 * padding - (cols - 1) * gap) / cols);
                 const rowH = Math.floor((viewH - 2 * padding - (rows - 1) * gap) / rows);
-                const colWbyH = Math.floor(rowH * 1920 / 1080);
+                const colWbyH = Math.floor(rowH * 960 / 540);
                 const effectiveColW = inFS ? Math.min(colW, colWbyH) : colW;
                 if (effectiveColW <= 0) return;
-                const scale = effectiveColW / 1920;
-                const tileH = Math.round(1080 * scale);
+                const scale = effectiveColW / 960;
+                const tileH = Math.round(540 * scale);
                 grid.style.padding = padding + 'px';
                 grid.style.gap = gap + 'px';
                 grid.style.gridTemplateColumns = `repeat(${cols}, ${effectiveColW}px)`;
@@ -229,7 +229,10 @@
             // The broker sends retained messages for every known piste on connect,
             // so the grid populates automatically without any manual configuration.
             // {"online": false} → remove tile;  {"online": true} → add tile.
-            const useSSL = location.protocol === 'https:';
+            // Loopback is always secure — skip WSS to avoid cert issues on localhost
+            const useSSL = location.protocol === 'https:' &&
+                           location.hostname !== 'localhost' &&
+                           location.hostname !== '127.0.0.1';
             const port = useSSL ? 9002 : 9001;
             const client = new Paho.MQTT.Client(
                 location.hostname, port, 'overview_' + Date.now());
@@ -253,11 +256,27 @@
                 }
             };
 
-            client.connect({
-                useSSL,
-                onSuccess: () => client.subscribe('openpiste/+/apparatus/connection'),
-                onFailure: (err) => console.error('MQTT connect failed:', err)
-            });
+            // Paho mutates the options object it receives (adds mqttVersionExplicit),
+            // so a fresh object must be created for every connect() call.
+            function mqttConnect() {
+                client.connect({
+                    useSSL,
+                    onSuccess: () => client.subscribe('openpiste/+/apparatus/connection'),
+                    onFailure: (err) => {
+                        console.error('MQTT connect failed:', err);
+                        setTimeout(mqttConnect, 5000);
+                    }
+                });
+            }
+
+            client.onConnectionLost = (resp) => {
+                if (resp.errorCode !== 0) {
+                    console.warn('MQTT connection lost, reconnecting…', resp.errorMessage);
+                    setTimeout(mqttConnect, 5000);
+                }
+            };
+
+            mqttConnect();
         }
 
         rescaleAll();
