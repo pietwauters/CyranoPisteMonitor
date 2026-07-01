@@ -11,8 +11,13 @@ const router = express.Router();
 const CA_DIR = "/home/atlas/scoring-broker/ca";
 const DEVICES_DIR = "/home/atlas/scoring-broker/devices";
 
-// Read once at startup — ca.crt is static for the lifetime of the process.
-const caCert = fs.readFileSync(path.join(CA_DIR, "ca.crt"), "utf8");
+// Loaded on first enrolment and cached — ca.crt requires elevated permissions
+// not guaranteed at startup time.
+let caCert = null;
+function getCaCert() {
+  if (!caCert) caCert = fs.readFileSync(path.join(CA_DIR, "ca.crt"), "utf8");
+  return caCert;
+}
 
 
 
@@ -111,7 +116,7 @@ router.post("/enrol", express.json({ limit: "10kb" }), async (req, res) => {
   pairing.deviceId = null;
   pairing.expires = 0;
 
-  res.json({ deviceCert, caCert });
+  res.json({ deviceCert, caCert: getCaCert() });
 });
 
 
