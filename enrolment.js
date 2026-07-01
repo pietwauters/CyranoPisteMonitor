@@ -2,12 +2,17 @@ const express = require("express");
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
-const { execFileSync } = require("child_process");
+const { execFile } = require("child_process");
+const { promisify } = require("util");
 
+const execFileAsync = promisify(execFile);
 const router = express.Router();
 
 const CA_DIR = "/home/atlas/scoring-broker/ca";
 const DEVICES_DIR = "/home/atlas/scoring-broker/devices";
+
+// Read once at startup — ca.crt is static for the lifetime of the process.
+const caCert = fs.readFileSync(path.join(CA_DIR, "ca.crt"), "utf8");
 
 
 
@@ -63,16 +68,21 @@ router.post("/pair/start", express.json(), (req, res) => {
 });
 
 // ESP enrol
-router.post("/enrol", express.json({ limit: "10kb" }), (req, res) => {
+router.post("/enrol", express.json({ limit: "10kb" }), async (req, res) => {
   const { deviceId, csrPem, auth } = req.body;
   if (!isPairingValid()) return res.status(403).send("Pairing window expired");
   if (!deviceId || !csrPem || !auth) return res.status(400).send("Missing parameters");
 
+  if (!/^[a-zA-Z0-9_-]{1,64}$/.test(deviceId))
+    return res.status(400).send("Invalid deviceId");
+
   if (deviceId !== pairing.deviceId) return res.status(403).send("Device not authorized");
 
-  // verify HMAC using the stored challenge
+  // verify HMAC using the stored challenge (constant-time comparison prevents timing attacks)
   const expectedHmac = hmacSha256(pairing.challenge, deviceId + csrPem);
-  if (expectedHmac !== auth) {
+  const expectedBuf  = Buffer.from(expectedHmac, 'hex');
+  const actualBuf    = Buffer.from(typeof auth === 'string' ? auth : '', 'hex');
+  if (expectedBuf.length !== actualBuf.length || !crypto.timingSafeEqual(expectedBuf, actualBuf)) {
     console.log("[ENROL] HMAC mismatch for device:", deviceId);
     return res.status(403).send("Authentication failed");
   }
@@ -81,18 +91,19 @@ router.post("/enrol", express.json({ limit: "10kb" }), (req, res) => {
 
   const csrPath = `/tmp/${deviceId}.csr`;
   const certPath = path.join(DEVICES_DIR, `${deviceId}.crt`);
-  fs.writeFileSync(csrPath, csrPem);
+  await fs.promises.writeFile(csrPath, csrPem);
 
   try {
-    execFileSync("/usr/local/bin/sign-device-cert.sh", [csrPath, certPath]);
+    await execFileAsync("/usr/local/bin/sign-device-cert.sh", [csrPath, certPath]);
     console.log(`[ENROL] Certificate signed at ${certPath}`);
   } catch (err) {
     console.error("[ENROL] Signing failed:", err);
     return res.status(500).send("Signing failed");
+  } finally {
+    fs.promises.unlink(csrPath).catch(() => {});
   }
 
-  const deviceCert = fs.readFileSync(certPath, "utf8");
-  const caCert = fs.readFileSync(path.join(CA_DIR, "ca.crt"), "utf8");
+  const deviceCert = await fs.promises.readFile(certPath, "utf8");
 
   // Clear pairing
   pairing.enabled = false;
