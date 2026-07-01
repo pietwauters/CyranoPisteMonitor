@@ -53,23 +53,17 @@
         }
 
         /*
-         * iframe tile layout — the key to correct scaling:
+         * iframe tile layout:
          *
-         * The iframe is declared 960×540 px (half-HD). We scale it down with
-         * CSS transform: scale(s) where s = colWidth / 960.
-         * transform does NOT affect layout, so the iframe still occupies
-         * 960×540 in the document flow and overflows the wrapper.
-         * overflow:hidden clips it to the visible tile area.
+         * Each iframe is sized to exactly the tile's display dimensions by
+         * rescaleAll(). No CSS transform or overrender — the browser renders
+         * each iframe at precisely the pixels it will show. vmin/vw/vh inside
+         * each frame resolve relative to the tile size, so text and elements
+         * scale proportionally regardless of how many pistes are on screen.
          *
          * CRITICAL: the wrapper must be display:block (not flex).
-         * A flex container applies flex-shrink to its children, which
-         * would collapse the iframe's layout height from 540px to the
-         * tile's visual height. That makes 1vh inside the iframe
-         * resolve incorrectly, breaking all vh-based sizing inside index.html.
-         *
-         * JS sets wrapper width and height to colWidth × (540/960*colWidth)
-         * so the grid rows are the right visual size.
-         * 960×540 (not 1920×1080) reduces GPU compositing surface by 4×.
+         * A flex container applies flex-shrink to its children, collapsing
+         * the iframe's layout height and breaking vh-based sizing inside index.html.
          */
         .tile.iframe-tile {
             display: block;
@@ -126,12 +120,9 @@
             const iframe = document.createElement('iframe');
             iframe.src = `/piste/${id}?embed=1`;
             iframe.setAttribute('frameborder', '0');
-            iframe.style.width = '960px';
-            iframe.style.height = '540px';
             iframe.style.border = '0';
-            iframe.style.flexShrink = '0'; // never let a flex parent collapse the height
-            iframe.style.transformOrigin = '0 0';
             iframe.style.display = 'block';
+            // Size set by rescaleAll() to exactly match the display tile — no transform needed.
 
             // Transparent overlay to capture clicks — iframes swallow mouse events
             // so a click listener on the wrapper never fires without this.
@@ -168,6 +159,17 @@
             rebuildGrid();
         }
 
+        function setTileSize(colW, tileH) {
+            // Iframes are sized to exactly the display dimensions — no CSS transform,
+            // no overrender. vmin/vw/vh inside each frame resolve to the tile size.
+            Object.values(tiles).forEach(t => {
+                t.el.style.width  = colW  + 'px';
+                t.el.style.height = tileH + 'px';
+                t.iframe.style.width  = colW  + 'px';
+                t.iframe.style.height = tileH + 'px';
+            });
+        }
+
         function rescaleAll() {
             const count = Object.keys(tiles).length;
             if (count === 0) return;
@@ -181,18 +183,13 @@
                 const padding = 12, gap = 12;
                 const colW = Math.floor((viewW - 2 * padding - (cols - 1) * gap) / cols);
                 if (colW <= 0) return;
-                const scale = colW / 960;
-                const tileH = Math.round(540 * scale);
+                const tileH = Math.round(colW * 9 / 16);
                 grid.style.padding = padding + 'px';
                 grid.style.gap = gap + 'px';
                 grid.style.gridTemplateColumns = `repeat(${cols}, ${colW}px)`;
-                Object.values(tiles).forEach(t => {
-                    t.el.style.width = colW + 'px';
-                    t.el.style.height = tileH + 'px';
-                    t.iframe.style.transform = `scale(${scale})`;
-                });
+                setTileSize(colW, tileH);
             } else {
-                // Fit-all mode: scale everything so all tiles fit on one screen.
+                // Fit-all mode: all tiles fit on one screen without scrolling.
                 // In fullscreen: also constrain by viewport height.
                 const inFS = !!document.fullscreenElement;
                 const cols = Math.ceil(Math.sqrt(count));
@@ -200,19 +197,14 @@
                 const padding = inFS ? 0 : 12, gap = inFS ? 2 : 12;
                 const colW = Math.floor((viewW - 2 * padding - (cols - 1) * gap) / cols);
                 const rowH = Math.floor((viewH - 2 * padding - (rows - 1) * gap) / rows);
-                const colWbyH = Math.floor(rowH * 960 / 540);
+                const colWbyH = Math.floor(rowH * 16 / 9);
                 const effectiveColW = inFS ? Math.min(colW, colWbyH) : colW;
                 if (effectiveColW <= 0) return;
-                const scale = effectiveColW / 960;
-                const tileH = Math.round(540 * scale);
+                const tileH = Math.round(effectiveColW * 9 / 16);
                 grid.style.padding = padding + 'px';
                 grid.style.gap = gap + 'px';
                 grid.style.gridTemplateColumns = `repeat(${cols}, ${effectiveColW}px)`;
-                Object.values(tiles).forEach(t => {
-                    t.el.style.width = effectiveColW + 'px';
-                    t.el.style.height = tileH + 'px';
-                    t.iframe.style.transform = `scale(${scale})`;
-                });
+                setTileSize(effectiveColW, tileH);
             }
         }
 
