@@ -162,9 +162,13 @@
     deserialize: function(messageType, payload) {
       try {
         const data = JSON.parse(payload);
-        
-        // Validate protocol
-        if (data.protocol !== OPP2.PROTOCOL_ID) {
+
+        // Validate protocol -- except for CONNECTION, whose retained message
+        // is often a broker-generated Last Will (e.g. {"online":false}) set
+        // as a static payload at connect time, so it can't carry the full
+        // OPP2 envelope. deserializeConnection() already defaults every
+        // field for exactly this case.
+        if (messageType !== OPP2.MessageType.CONNECTION && data.protocol !== OPP2.PROTOCOL_ID) {
           console.warn('Invalid protocol:', data.protocol);
           return null;
         }
