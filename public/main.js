@@ -102,10 +102,51 @@ if (new URLSearchParams(window.location.search).get('layout') === 'v2') {
   document.body.classList.add('layout-v2');
 }
 
+// Broker link status is distinct from the scoring device's own OPP2
+// CONNECTION status: this tracks whether *this page* has a live MQTT
+// connection at all. Paho mutates the options object passed to connect(),
+// so a fresh object is built on every attempt (same gotcha as overview.html).
+function setBrokerOnline(online) {
+  if (elements.v2.brokerDot) elements.v2.brokerDot.classList.toggle('online', online);
+}
+
+function mqttConnect() {
+  // Guards against a stale scheduled retry firing after the client already
+  // reconnected through another path (e.g. overlapping connection-lost
+  // events) -- Paho throws synchronously if connect() is called while
+  // already connected.
+  if (client.isConnected()) return;
+  client.connect({
+    useSSL: useSSL,
+    onSuccess: () => {
+      setBrokerOnline(true);
+      if (currentPiste) {
+        client.subscribe(`openpiste/${currentPiste}/apparatus/#`);
+        document.querySelector('.poolNum').textContent = `Strip ${currentPiste}`;
+        if (elements.v2.footerPisteVal) elements.v2.footerPisteVal.textContent = currentPiste;
+        loadFencerPhotos();
+      }
+    },
+    onFailure: (err) => {
+      console.error("Connection failed:", err);
+      setBrokerOnline(false);
+      setTimeout(mqttConnect, 5000);
+    }
+  });
+}
+
+client.onConnectionLost = (response) => {
+  setBrokerOnline(false);
+  if (response.errorCode !== 0) {
+    console.warn('MQTT connection lost, reconnecting…', response.errorMessage);
+    setTimeout(mqttConnect, 5000);
+  }
+};
+
 window.onload = function () {
   const pisteSelect = document.getElementById('piste-select');
   const urlPiste = getPisteFromURL();
-  
+
   // Populate piste selector with numbers and allow text entry
   for (let i = 1; i <= 999; i++) {
     const option = document.createElement('option');
@@ -113,7 +154,7 @@ window.onload = function () {
     option.text = `Piste ${i}`;
     pisteSelect.appendChild(option);
   }
-  
+
   if (urlPiste) {
     pisteSelect.style.display = 'none';
     document.getElementById('fullscreen-btn').style.top = '2vmin';
@@ -121,23 +162,8 @@ window.onload = function () {
     currentPiste = urlPiste;
     displayedPiste = urlPiste;
     pisteSelect.value = urlPiste;
-    client.connect({
-      useSSL: useSSL,
-      onSuccess: () => {
-        client.subscribe(`openpiste/${currentPiste}/apparatus/#`);
-        document.querySelector('.poolNum').textContent = `Strip ${currentPiste}`;
-        if (elements.v2.footerPisteVal) elements.v2.footerPisteVal.textContent = currentPiste;
-        loadFencerPhotos();
-      },
-      onFailure: (err) => console.error("Connection failed:", err)
-    });
-  } else {
-    client.connect({
-      useSSL: useSSL,
-      onSuccess: () => console.log("Connected to MQTT broker"),
-      onFailure: (err) => console.error("Connection failed:", err)
-    });
   }
+  mqttConnect();
   handleResize();
 };
 
@@ -217,6 +243,7 @@ const elements = {
     uw2f: document.getElementById('v2-uw2f'),
     stateBadge: document.getElementById('v2-stateBadge'),
     connDot: document.getElementById('v2-connDot'),
+    brokerDot: document.getElementById('v2-brokerDot'),
     footerPisteVal: document.getElementById('v2-piste-val'),
     footerPouleVal: document.getElementById('v2-poule-val'),
     footerSubline: document.getElementById('v2-subline')

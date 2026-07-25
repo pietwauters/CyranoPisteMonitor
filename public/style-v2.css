@@ -321,11 +321,34 @@
 .v2-board .footer-col--mid { align-items: center; }
 .v2-board .footer-col--time { align-items: flex-end; flex-direction: row; justify-content: flex-end; gap: 1.4cqw; }
 
+.v2-board .cap-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6cqh;
+}
+
 .v2-board .cap {
   font-size: 1.6cqh;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--caption);
+}
+
+/* Broker connection dot: separate from the scoring device's own conn-dot --
+   this one reflects whether the page itself has a live MQTT link to the
+   broker (dark grey = disconnected, cyan = connected), so it sits next to
+   the page-level "Piste" label rather than the device state badge. */
+.v2-board .broker-dot {
+  width: 1.1cqh;
+  height: 1.1cqh;
+  border-radius: 50%;
+  background: #3a3f46;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.v2-board .broker-dot.online {
+  background: var(--cyan-timer);
+  box-shadow: 0 0 0.8cqh rgba(63, 232, 255, 0.65);
 }
 
 .v2-board .val {
