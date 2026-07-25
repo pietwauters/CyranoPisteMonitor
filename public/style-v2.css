@@ -308,7 +308,7 @@
 
 .v2-board .footer {
   display: grid;
-  grid-template-columns: 1fr 1.2fr 1fr;
+  grid-template-columns: 1fr auto 1fr 1fr;
   align-items: center;
   padding: 0 3cqw;
   color: var(--idle-ink);
@@ -317,7 +317,8 @@
 .v2-board .footer-col { display: flex; flex-direction: column; gap: 0.4cqh; }
 
 .v2-board .footer-col--piste { align-items: flex-start; }
-.v2-board .footer-col--mid { align-items: center; position: relative; }
+.v2-board .footer-col--state { align-items: center; padding: 0 2cqw; }
+.v2-board .footer-col--mid { align-items: center; }
 .v2-board .footer-col--time { align-items: flex-end; flex-direction: row; justify-content: flex-end; gap: 1.4cqw; }
 
 .v2-board .cap {
@@ -341,14 +342,20 @@
   letter-spacing: 0.04em;
 }
 
+/* State badge + connection dot are grouped together -- both describe the
+   scoring device's own status, so they sit as one unit between the piste
+   and poule columns rather than the badge floating above the bout number. */
+.v2-board .state-group {
+  display: flex;
+  align-items: center;
+  gap: 0.9cqh;
+}
+
 .v2-board .state-badge {
-  position: absolute;
-  top: -0.4cqh;
-  transform: translateY(-100%);
-  font-size: 2.1cqh;
+  font-size: 2.6cqh;
   font-weight: 800;
   line-height: 1;
-  padding: 0.5cqh 1.1cqh;
+  padding: 0.6cqh 1.3cqh;
   border-radius: 3px;
   background: rgba(255, 255, 255, 0.1);
   color: #e8eef2;
@@ -365,6 +372,20 @@
 
 @media (prefers-reduced-motion: reduce) {
   .v2-board .state-badge[data-state="E"] { animation: none; }
+}
+
+/* Scoring device connection dot: dark grey = offline, green = online. */
+.v2-board .conn-dot {
+  width: 1.6cqh;
+  height: 1.6cqh;
+  border-radius: 50%;
+  background: #3a3f46;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.v2-board .conn-dot.online {
+  background: var(--green-idle);
+  box-shadow: 0 0 1cqh rgba(47, 224, 74, 0.65);
 }
 
 @keyframes v2-pulse-state {

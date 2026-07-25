@@ -69,8 +69,9 @@ dispatcher.on(OPP2.MessageType.APPARATUS_STATE, (topic, message) => {
 });
 
 dispatcher.on(OPP2.MessageType.CONNECTION, (topic, message) => {
-  // Optional: could show connection status indicator
-  console.log('Connection:', message.online ? 'online' : 'offline');
+  if (elements.v2.connDot) {
+    elements.v2.connDot.classList.toggle('online', !!message.online);
+  }
 });
 
 dispatcher.onError = (error, topic, detail) => {
@@ -215,6 +216,7 @@ const elements = {
     clock: document.getElementById('v2-clock'),
     uw2f: document.getElementById('v2-uw2f'),
     stateBadge: document.getElementById('v2-stateBadge'),
+    connDot: document.getElementById('v2-connDot'),
     footerPisteVal: document.getElementById('v2-piste-val'),
     footerPouleVal: document.getElementById('v2-poule-val'),
     footerSubline: document.getElementById('v2-subline')
@@ -338,6 +340,7 @@ function resetDisplay() {
   updateFlag(elements.v2.leftFlag, null);
   updateFlag(elements.v2.rightFlag, null);
   if (elements.v2.clock) elements.v2.clock.textContent = '0:00';
+  if (elements.v2.connDot) elements.v2.connDot.classList.remove('online');
   elements.v2.leftBand.classList.remove('lit', 'invalid');
   elements.v2.rightBand.classList.remove('lit', 'invalid');
   elements.v2.leftPriorityMark.classList.remove('active');
