@@ -2,7 +2,10 @@
 
 let currentPiste = "";
 let displayedPiste = "";
-const useSSL = location.protocol === 'https:';
+// Loopback is always secure — skip WSS to avoid cert issues on localhost
+const useSSL = location.protocol === 'https:' &&
+               location.hostname !== 'localhost' &&
+               location.hostname !== '127.0.0.1';
 const port = useSSL ? 9002 : 9001;
 const client = new Paho.MQTT.Client(location.hostname, port, "fencingDisplay_" + Date.now());
 
@@ -55,6 +58,14 @@ dispatcher.on(OPP2.MessageType.APPARATUS_STATE, (topic, message) => {
       elements.apparatusState.classList.remove('state-ending');
     }
   }
+
+  // v2 layout: the ported CSS keys entirely off the [data-state] attribute,
+  // no class toggling needed.
+  if (elements.v2.stateBadge) {
+    const state = message.state || 'W';
+    elements.v2.stateBadge.textContent = state;
+    elements.v2.stateBadge.setAttribute('data-state', state);
+  }
 });
 
 dispatcher.on(OPP2.MessageType.CONNECTION, (topic, message) => {
@@ -86,6 +97,10 @@ if (new URLSearchParams(window.location.search).get('embed') === '1') {
   });
 }
 
+if (new URLSearchParams(window.location.search).get('layout') === 'v2') {
+  document.body.classList.add('layout-v2');
+}
+
 window.onload = function () {
   const pisteSelect = document.getElementById('piste-select');
   const urlPiste = getPisteFromURL();
@@ -110,6 +125,7 @@ window.onload = function () {
       onSuccess: () => {
         client.subscribe(`openpiste/${currentPiste}/apparatus/#`);
         document.querySelector('.poolNum').textContent = `Strip ${currentPiste}`;
+        if (elements.v2.footerPisteVal) elements.v2.footerPisteVal.textContent = currentPiste;
         loadFencerPhotos();
       },
       onFailure: (err) => console.error("Connection failed:", err)
@@ -135,6 +151,7 @@ document.getElementById('piste-select').addEventListener('change', (e) => {
     client.subscribe(`openpiste/${currentPiste}/apparatus/#`);
     resetDisplay();
     document.querySelector('.poolNum').textContent = `Strip ${currentPiste}`;
+    if (elements.v2.footerPisteVal) elements.v2.footerPisteVal.textContent = currentPiste;
     loadFencerPhotos();
   }
 });
@@ -171,7 +188,37 @@ const elements = {
   rightPhotoImg: document.querySelector('.right-photo img'),
   uw2fTimer: document.getElementById('uw2f-timer'),
   buzzer: document.getElementById('buzzer-sound'),
-  apparatusState: document.querySelector('.apparatus-state')
+  apparatusState: document.querySelector('.apparatus-state'),
+  v2: {
+    leftBand: document.getElementById('v2-leftBand'),
+    rightBand: document.getElementById('v2-rightBand'),
+    leftSurname: document.querySelector('#v2-leftBand .surname'),
+    leftFirstname: document.querySelector('#v2-leftBand .firstname'),
+    rightSurname: document.querySelector('#v2-rightBand .surname'),
+    rightFirstname: document.querySelector('#v2-rightBand .firstname'),
+    leftNation: document.querySelector('#v2-leftBand .nation-code'),
+    rightNation: document.querySelector('#v2-rightBand .nation-code'),
+    leftFlag: document.querySelector('#v2-leftBand .flag'),
+    rightFlag: document.querySelector('#v2-rightBand .flag'),
+    leftScore: document.querySelector('#v2-leftBand .score'),
+    rightScore: document.querySelector('#v2-rightBand .score'),
+    cards: {
+      leftYellow: document.getElementById('v2-leftYellow'),
+      leftRed: document.getElementById('v2-leftRed'),
+      leftP: document.getElementById('v2-leftP'),
+      rightYellow: document.getElementById('v2-rightYellow'),
+      rightRed: document.getElementById('v2-rightRed'),
+      rightP: document.getElementById('v2-rightP')
+    },
+    leftPriorityMark: document.getElementById('v2-leftPriority'),
+    rightPriorityMark: document.getElementById('v2-rightPriority'),
+    clock: document.getElementById('v2-clock'),
+    uw2f: document.getElementById('v2-uw2f'),
+    stateBadge: document.getElementById('v2-stateBadge'),
+    footerPisteVal: document.getElementById('v2-piste-val'),
+    footerPouleVal: document.getElementById('v2-poule-val'),
+    footerSubline: document.getElementById('v2-subline')
+  }
 };
 
 (function generateBuzzerSound() {
@@ -280,6 +327,29 @@ function resetDisplay() {
   });
   // Reset buzzer state
   buzzerPlayed = false;
+
+  // v2 layout
+  setFencerNameV2(elements.v2.leftSurname, elements.v2.leftFirstname, '');
+  setFencerNameV2(elements.v2.rightSurname, elements.v2.rightFirstname, '');
+  elements.v2.leftScore.textContent = '0';
+  elements.v2.rightScore.textContent = '0';
+  elements.v2.leftNation.textContent = '';
+  elements.v2.rightNation.textContent = '';
+  updateFlag(elements.v2.leftFlag, null);
+  updateFlag(elements.v2.rightFlag, null);
+  if (elements.v2.clock) elements.v2.clock.textContent = '0:00';
+  elements.v2.leftBand.classList.remove('lit', 'invalid');
+  elements.v2.rightBand.classList.remove('lit', 'invalid');
+  elements.v2.leftPriorityMark.classList.remove('active');
+  elements.v2.rightPriorityMark.classList.remove('active');
+  Object.values(elements.v2.cards).forEach(card => {
+    card.classList.remove('active', 'level-1', 'level-2');
+    card.removeAttribute('data-level');
+  });
+  if (elements.v2.uw2f) {
+    elements.v2.uw2f.textContent = '';
+    elements.v2.uw2f.classList.remove('visible', 'level-warn', 'level-danger');
+  }
 }
 
 // OPP2 Message Update Functions
@@ -288,17 +358,25 @@ function updateLights(message) {
   // Left side (red for on-target, white for off-target)
   updateLight(elements.lights.lColor, message.left.on_target);
   updateLight(elements.lights.lWhite, message.left.white);
-  
+
   // Right side (green for on-target, white for off-target)
   updateLight(elements.lights.rColor, message.right.on_target);
   updateLight(elements.lights.rWhite, message.right.white);
-  
+
   checkAndPlayBuzzer();
+
+  // v2 layout: on_target -> coloured chevron, white -> invalid (white) chevron
+  elements.v2.leftBand.classList.toggle('lit', !!message.left.on_target);
+  elements.v2.leftBand.classList.toggle('invalid', !!message.left.white);
+  elements.v2.rightBand.classList.toggle('lit', !!message.right.on_target);
+  elements.v2.rightBand.classList.toggle('invalid', !!message.right.white);
 }
 
 function updateClock(message) {
   elements.clock.textContent = message.time || "0:00";
   // Optional: could add visual indicator if clock is running
+
+  if (elements.v2.clock) elements.v2.clock.textContent = message.time || "0:00";
 }
 
 function updateScore(message) {
@@ -329,21 +407,50 @@ function updateScore(message) {
     elements.rightPriority.textContent = 'P';
     elements.rightPriority.style.display = 'block';
   }
+
+  // v2 layout
+  elements.v2.leftScore.textContent = String(message.left.score);
+  elements.v2.rightScore.textContent = String(message.right.score);
+  updateCardV2(elements.v2.cards.leftYellow, message.left.yellow_card ? 1 : 0);
+  updateCardV2(elements.v2.cards.leftRed, message.left.red_cards);
+  updateCardV2(elements.v2.cards.rightYellow, message.right.yellow_card ? 1 : 0);
+  updateCardV2(elements.v2.cards.rightRed, message.right.red_cards);
+  // Note: v2's P-card is intentionally driven only from UW2F's p_card (see
+  // updateUW2F), not from black_card here -- unlike v1, which writes it from
+  // both messages (whichever fires last wins, an existing v1 quirk).
+  elements.v2.leftPriorityMark.classList.toggle('active', message.priority === OPP2.Priority.LEFT);
+  elements.v2.rightPriorityMark.classList.toggle('active', message.priority === OPP2.Priority.RIGHT);
 }
 
 function updateFencers(message) {
   // Names
   elements.leftName.textContent = message.left.fencer.name || "";
   elements.rightName.textContent = message.right.fencer.name || "";
-  
+
   // Flags (nationalities)
   updateFlag(elements.leftFlag, message.left.fencer.nation);
   updateFlag(elements.rightFlag, message.right.fencer.nation);
+
+  // v2 layout
+  setFencerNameV2(elements.v2.leftSurname, elements.v2.leftFirstname, message.left.fencer.name);
+  setFencerNameV2(elements.v2.rightSurname, elements.v2.rightFirstname, message.right.fencer.name);
+  elements.v2.leftNation.textContent = (message.left.fencer.nation || '').toUpperCase();
+  elements.v2.rightNation.textContent = (message.right.fencer.nation || '').toUpperCase();
+  updateFlag(elements.v2.leftFlag, message.left.fencer.nation);
+  updateFlag(elements.v2.rightFlag, message.right.fencer.nation);
 }
 
 function updateMatch(message) {
   // Round/Period
   elements.period.textContent = String(message.round || 1);
+
+  // v2 layout: poule number + a best-effort bout/period/relay sub-line.
+  // phase_type's full value set isn't documented anywhere in this codebase
+  // (test-publisher.js's only sample uses 'DE') -- revisit this mapping once
+  // real phase_type values from the field are confirmed.
+  const ctx = deriveV2Context(message);
+  if (elements.v2.footerPouleVal) elements.v2.footerPouleVal.textContent = ctx.poule;
+  if (elements.v2.footerSubline) elements.v2.footerSubline.textContent = ctx.subline;
 }
 
 function updateUW2F(message) {
@@ -365,10 +472,24 @@ function updateUW2F(message) {
       elements.uw2fTimer.classList.add('uw2f-red');
     }
     elements.uw2fTimer.style.display = 'block';
-    
+
     // Update P-cards from UW2F message
     updatePCard(elements.cards.lPCard, message.left.p_card);
     updatePCard(elements.cards.rPCard, message.right.p_card);
+
+    // v2 layout
+    if (elements.v2.uw2f) {
+      elements.v2.uw2f.textContent = timeStr;
+      elements.v2.uw2f.classList.add('visible');
+      elements.v2.uw2f.classList.remove('level-warn', 'level-danger');
+      if (totalSeconds >= 60) {
+        elements.v2.uw2f.classList.add('level-danger');
+      } else if (totalSeconds >= 50) {
+        elements.v2.uw2f.classList.add('level-warn');
+      }
+    }
+    updatePCardV2(elements.v2.cards.leftP, message.left.p_card);
+    updatePCardV2(elements.v2.cards.rightP, message.right.p_card);
   }
 }
 
@@ -399,6 +520,65 @@ function updateLight(element, isOn) {
   // isOn is now a boolean from OPP2
   element.style.opacity = isOn ? "1" : "0.1";
   element.style.boxShadow = isOn ? "0 0 15px currentColor" : "none";
+}
+
+// v2 layout helpers
+
+function updateCardV2(element, value) {
+  if (!element) return;
+  element.classList.toggle('active', value > 0);
+}
+
+function updatePCardV2(element, value) {
+  if (!element) return;
+  const n = parseInt(value, 10) || 0;
+  element.classList.remove('active', 'level-1', 'level-2');
+  element.setAttribute('data-level', n);
+  if (n === 1) {
+    element.classList.add('active', 'level-1');
+  } else if (n >= 2) {
+    element.classList.add('active', 'level-2');
+  }
+}
+
+// Best-effort name split: deserializeFencers only ever exposes one combined
+// "name" string (no separate given/family fields), and the field order isn't
+// guaranteed (test-publisher.js's fixture uses "Firstname SURNAME", e.g.
+// 'Jean DUPONT', but real feeds could plausibly send the opposite order) --
+// so this buckets by case rather than by position. Tokens with no lowercase
+// letters are treated as the surname (rendered first, matching the v2
+// layout's fixed visual convention), everything else as the first name.
+function setFencerNameV2(surnameEl, firstnameEl, fullName) {
+  if (!surnameEl || !firstnameEl) return;
+  const tokens = (fullName || '').trim().split(/\s+/).filter(Boolean);
+  const surnameTokens = tokens.filter(t => t === t.toUpperCase() && t !== t.toLowerCase());
+  const firstnameTokens = tokens.filter(t => !(t === t.toUpperCase() && t !== t.toLowerCase()));
+  if (surnameTokens.length === 0) {
+    surnameEl.textContent = tokens.join(' ');
+    firstnameEl.textContent = '';
+  } else {
+    surnameEl.textContent = surnameTokens.join(' ');
+    firstnameEl.textContent = firstnameTokens.join(' ');
+  }
+}
+
+// Best-effort footer mapping: v1 never displays "poule" and has no bout/
+// period/relay sub-line concept at all today. phase_type's full value set
+// isn't documented anywhere in this repo -- the only concrete sample
+// (test-publisher.js's publishMatch()) uses phase_type: 'DE'. Revisit this
+// once real phase_type values from the field are confirmed.
+function deriveV2Context(message) {
+  const poule = message.poule || message.phase || '';
+  const type = (message.phase_type || '').toLowerCase();
+  let subline;
+  if (type.includes('poule') || type.includes('pool')) {
+    subline = 'Bout ' + message.match;
+  } else if (type.includes('team') || type.includes('relay')) {
+    subline = 'Relay ' + message.round;
+  } else {
+    subline = 'Period ' + message.round; // default, matches v1's existing round-as-period display
+  }
+  return { poule: String(poule), subline };
 }
 
 const fullscreenButton = document.getElementById('fullscreen-btn');

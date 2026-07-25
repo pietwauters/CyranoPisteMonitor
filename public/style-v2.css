@@ -1,0 +1,396 @@
+/* Alternative single-strip layout ("v2"), enabled via /piste/<id>?layout=v2.
+   Ported from the approved Claude Artifact mockup. Every selector is scoped
+   under .v2-board so it can never collide with style.css's classes, and none
+   of the artifact's internal class names were renamed in the process -- the
+   clip-path polygons, --stroke custom property, and priority-mark alignment
+   percentages are all coupled to each other and safer left untouched. */
+
+.v2-board {
+  --void: #050608;
+  --idle-ink: #cdeeff;
+  --lit-ink: #fbffff;
+
+  --red-idle: #ff4a2b;
+  --red-lit-a: #ff2510;
+  --red-lit-b: #ff6a3d;
+
+  --green-idle: #2fe04a;
+  --green-lit-a: #12c62d;
+  --green-lit-b: #6dfa7d;
+
+  --white-lit-a: #e9eef1;
+  --white-lit-b: #ffffff;
+  --invalid-ink: #10141a;
+
+  --cyan-timer: #3fe8ff;
+  --uw2f-ok: #2fe04a;
+  --uw2f-warn: #ffb020;
+  --uw2f-danger: #ff3b30;
+
+  --yellow-card: #ffd400;
+  --red-card: #ff2d1a;
+
+  --divider: rgba(255, 255, 255, 0.09);
+  --caption: rgba(255, 255, 255, 0.42);
+
+  --stroke: 1.4cqw;
+
+  container-type: size;
+  container-name: board;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  background: var(--void);
+  display: grid;
+  grid-template-rows: 5.5fr 5.5fr 3fr;
+  overflow: hidden;
+  position: relative;
+}
+
+.v2-board .band {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.v2-board .band--left { border-bottom: 1px solid var(--divider); }
+
+.v2-board .edge-pill {
+  position: absolute;
+  top: 0;
+  width: var(--stroke);
+  height: 100%;
+  z-index: 2;
+}
+
+.v2-board .band--left .edge-pill {
+  left: 1cqw;
+  background: linear-gradient(var(--red-idle), var(--red-idle));
+  box-shadow: 0 0 1.4cqh var(--red-idle);
+}
+
+.v2-board .band--right .edge-pill {
+  right: 1cqw;
+  background: linear-gradient(var(--green-idle), var(--green-idle));
+  box-shadow: 0 0 1.4cqh var(--green-idle);
+}
+
+/* Priority marker: persistent regardless of light state (priority is awarded
+   before the deciding period, independent of touches), so it's inline in
+   .fencer-name, symmetric with each fencer's own edge bar: at the very
+   start of the name for the left fencer (nearest the left edge-pill), at
+   the very end for the right fencer (nearest the right edge-pill). Colour
+   is the fencer's own idle red/green, with a dark outline so it stays
+   legible whether the band underneath is dark (idle), red/green (lit) or
+   white (invalid). When no priority is set it's `display: none` (not just
+   zero opacity), so the name sits flush against the edge-pill instead of
+   leaving a reserved gap. Kept a plain inline element (not inline-block) --
+   an inline-block with non-visible overflow computes its baseline from its
+   own bottom margin edge per spec, which misaligned it against the plain
+   inline surname/firstname spans next to it. */
+.v2-board .priority-mark {
+  display: none;
+  font-weight: 800;
+  line-height: 1;
+  -webkit-text-stroke: 0.4cqh rgba(0, 0, 0, 0.65);
+  paint-order: stroke fill;
+}
+
+.v2-board .priority-mark.active { display: inline; }
+
+.v2-board .band--left .priority-mark { color: var(--red-idle); }
+.v2-board .band--left .priority-mark.active { margin-right: 0.4em; }
+.v2-board .band--right .priority-mark { color: var(--green-idle); }
+.v2-board .band--right .priority-mark.active { margin-left: 0.4em; }
+
+/* .light-arrow holds the two pieces that appear once a light fires: the
+   pointed main body and the small trailing chevron. The edge-pill above is a
+   separate, always-visible element and is unaffected by this. */
+.v2-board .light-arrow {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 1;
+}
+
+.v2-board .band--left.lit .light-arrow,
+.v2-board .band--left.invalid .light-arrow,
+.v2-board .band--right.lit .light-arrow,
+.v2-board .band--right.invalid .light-arrow {
+  opacity: 1;
+}
+
+.v2-board .arrow-body {
+  position: absolute;
+  inset: 0;
+}
+
+/* Body spans the full band height, same as the edge bar and the tip. */
+.v2-board .band--left .arrow-body { clip-path: polygon(3.8% 0, 86.1% 0, 96.1% 50%, 86.1% 100%, 3.8% 100%); }
+.v2-board .band--right .arrow-body { clip-path: polygon(96.2% 0, 13.9% 0, 3.9% 50%, 13.9% 100%, 96.2% 100%); }
+
+/* Tip: a single hollow-chevron polygon (one connected shape, not two
+   separately-rotated bars) -- a single polygon has an explicit apex vertex,
+   so the point is genuinely sharp by construction. Angle (48deg from
+   horizontal) and stroke width (1.9cqw) come from the approved mockup. The
+   outer apex sits at the tip (99.9%/0.1%); the inner apex is recessed by
+   1.9cqw/sin(48deg) = 2.557cqw, which is the geometry that gives the stroke
+   its width. The four "back" points just need to reach past the band's
+   top/bottom edge -- they're cut off by the band's own `overflow: hidden`,
+   so their y-values (~-101%/~201%) are deliberately oversized rather than
+   exact trigonometric endpoints; only the two apex points need to be exact. */
+.v2-board .band--left .arrow-tip {
+  clip-path: polygon(
+    99.900% 50.000%, 69.900% -100.774%, 67.343% -100.774%,
+    97.343% 50.000%, 67.343% 200.774%, 69.900% 200.774%
+  );
+  background: var(--red-lit-b);
+}
+.v2-board .band--left.invalid .arrow-tip { background: var(--white-lit-b); }
+
+.v2-board .band--right .arrow-tip {
+  clip-path: polygon(
+    0.100% 50.000%, 30.100% -100.774%, 32.657% -100.774%,
+    2.657% 50.000%, 32.657% 200.774%, 30.100% 200.774%
+  );
+  background: var(--green-lit-b);
+}
+.v2-board .band--right.invalid .arrow-tip { background: var(--white-lit-b); }
+
+.v2-board .arrow-tip {
+  position: absolute;
+  inset: 0;
+}
+
+.v2-board .band--left .arrow-body {
+  background: linear-gradient(100deg, var(--red-lit-a), var(--red-lit-b) 80%);
+}
+
+.v2-board .band--right .arrow-body {
+  background: linear-gradient(-100deg, var(--green-lit-a), var(--green-lit-b) 80%);
+}
+
+.v2-board .band--left.invalid .arrow-body {
+  background: linear-gradient(100deg, var(--white-lit-a), var(--white-lit-b) 80%);
+}
+
+.v2-board .band--right.invalid .arrow-body {
+  background: linear-gradient(-100deg, var(--white-lit-a), var(--white-lit-b) 80%);
+}
+
+.v2-board .band-content {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4cqh;
+  padding: 0 4cqw;
+  color: var(--idle-ink);
+  transition: color 0.28s ease;
+}
+
+.v2-board .band.lit .band-content { color: var(--lit-ink); }
+.v2-board .band.invalid .band-content { color: var(--invalid-ink); }
+
+.v2-board .band--right .band-content { align-items: flex-end; text-align: right; }
+
+.v2-board .fencer-name {
+  font-family: "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  font-size: 12cqh;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.v2-board .fencer-name .surname { font-weight: 800; text-transform: uppercase; letter-spacing: 0.01em; }
+.v2-board .fencer-name .firstname { font-weight: 400; margin-left: 0.4em; }
+
+.v2-board .fencer-info {
+  display: flex;
+  align-items: center;
+  gap: 2.4cqw;
+}
+
+.v2-board .nation {
+  display: flex;
+  align-items: center;
+  gap: 0.7cqw;
+}
+
+.v2-board .nation-code {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 3.1cqh;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  opacity: 0.85;
+}
+
+.v2-board .flag {
+  width: 18cqh;
+  height: 12cqh;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25);
+  flex: none;
+}
+
+.v2-board .band.invalid .flag { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3); }
+
+.v2-board .score {
+  font-family: "Consolas", "SF Mono", "DejaVu Sans Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 19cqh;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.v2-board .cards {
+  display: flex;
+  gap: 0.9cqw;
+  align-items: center;
+  min-width: 11cqw;
+}
+
+.v2-board .card {
+  width: 5cqh;
+  height: 6.8cqh;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  opacity: 0.25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.v2-board .card.yellow-card.active {
+  background: var(--yellow-card);
+  opacity: 1;
+  box-shadow: 0 0 1.2cqh rgba(255, 212, 0, 0.55);
+}
+
+.v2-board .card.red-card.active {
+  background: var(--red-card);
+  opacity: 1;
+  box-shadow: 0 0 1.2cqh rgba(255, 45, 26, 0.55);
+}
+
+.v2-board .card-letter {
+  font-family: "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  font-size: 4cqh;
+  font-weight: 800;
+  line-height: 1;
+  opacity: 0;
+}
+
+.v2-board .card.p-card.active .card-letter { opacity: 1; }
+
+.v2-board .card.p-card.level-1 {
+  background: var(--yellow-card);
+  opacity: 1;
+  box-shadow: 0 0 1.2cqh rgba(255, 212, 0, 0.55);
+}
+
+.v2-board .card.p-card.level-1 .card-letter { color: rgba(20, 16, 0, 0.72); }
+
+.v2-board .card.p-card.level-2 {
+  background: var(--red-card);
+  opacity: 1;
+  box-shadow: 0 0 1.2cqh rgba(255, 45, 26, 0.55);
+}
+
+.v2-board .card.p-card.level-2 .card-letter { color: #fff; }
+
+/* ---------- footer ---------- */
+
+.v2-board .footer {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  align-items: center;
+  padding: 0 3cqw;
+  color: var(--idle-ink);
+}
+
+.v2-board .footer-col { display: flex; flex-direction: column; gap: 0.4cqh; }
+
+.v2-board .footer-col--piste { align-items: flex-start; }
+.v2-board .footer-col--mid { align-items: center; position: relative; }
+.v2-board .footer-col--time { align-items: flex-end; flex-direction: row; justify-content: flex-end; gap: 1.4cqw; }
+
+.v2-board .cap {
+  font-size: 1.6cqh;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--caption);
+}
+
+.v2-board .val {
+  font-family: "Consolas", "SF Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 6cqh;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.v2-board .subline {
+  font-size: 1.7cqh;
+  color: var(--caption);
+  letter-spacing: 0.04em;
+}
+
+.v2-board .state-badge {
+  position: absolute;
+  top: -0.4cqh;
+  transform: translateY(-100%);
+  font-size: 2.1cqh;
+  font-weight: 800;
+  line-height: 1;
+  padding: 0.5cqh 1.1cqh;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #e8eef2;
+  letter-spacing: 0.05em;
+}
+
+.v2-board .state-badge[data-state="H"] { background: rgba(255, 176, 32, 0.18); color: var(--uw2f-warn); }
+.v2-board .state-badge[data-state="P"] { background: rgba(77, 163, 255, 0.18); color: #6fb4ff; }
+.v2-board .state-badge[data-state="E"] {
+  background: rgba(255, 59, 48, 0.2);
+  color: #ff5c52;
+  animation: v2-pulse-state 1.1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v2-board .state-badge[data-state="E"] { animation: none; }
+}
+
+@keyframes v2-pulse-state {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+.v2-board .uw2f {
+  font-family: "Consolas", "SF Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 4.6cqh;
+  font-weight: 700;
+  color: var(--uw2f-ok);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.v2-board .uw2f.visible { opacity: 1; }
+.v2-board .uw2f.level-warn { color: var(--uw2f-warn); }
+.v2-board .uw2f.level-danger { color: var(--uw2f-danger); }
+
+.v2-board .clock {
+  font-family: "Consolas", "SF Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 7.4cqh;
+  font-weight: 700;
+  color: var(--cyan-timer);
+  line-height: 1;
+}

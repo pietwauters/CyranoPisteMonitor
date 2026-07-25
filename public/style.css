@@ -67,6 +67,13 @@ body {
     flex-direction: column;
 }
 
+/* Alternative "v2" layout toggle (?layout=v2): swap which board renders
+   inside .scoring-container, everything else about its sizing/fullscreen/
+   frame-colour handling stays untouched. */
+.scoring-container .v2-board { display: none; }
+body.layout-v2 .scoring-container .v1-board { display: none; }
+body.layout-v2 .scoring-container .v2-board { display: grid; }
+
 body.embed-mode {
     background: #000;
 }
