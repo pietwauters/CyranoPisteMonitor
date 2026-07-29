@@ -701,7 +701,7 @@ function handleResize() {
 function updateFlag(flagElement, nocCode) {
   if (nocCode && nocCode.length === 3) {
     const newSrc = `/flags/${nocCode.toUpperCase()}.png`;
-    if (flagElement.src !== newSrc) {
+    if (flagElement.getAttribute('src') !== newSrc) {
       flagElement.src = newSrc;
     }
     flagElement.style.display = 'block';
