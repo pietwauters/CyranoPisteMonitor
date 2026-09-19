@@ -123,7 +123,17 @@ else
   echo "==> mosquitto.conf already updated"
 fi
 
-### 8. mDNS ########################################################
+### 8. Mosquitto systemd drop-in: wait for AP interface ############
+echo "==> Adding systemd drop-in for network-online.target"
+mkdir -p /etc/systemd/system/mosquitto.service.d
+cat > /etc/systemd/system/mosquitto.service.d/wait-for-network.conf <<'EOF'
+[Unit]
+After=network-online.target
+Wants=network-online.target
+EOF
+systemctl daemon-reload
+
+### 9. mDNS ########################################################
 echo "==> Ensuring mDNS hostname ${BROKER_NAME}.local"
 hostnamectl set-hostname "$BROKER_NAME"
 systemctl enable avahi-daemon

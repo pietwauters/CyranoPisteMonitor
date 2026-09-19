@@ -1,0 +1,59 @@
+# CLAUDE.md
+
+Guidance for working in this repo, beyond what README.md already covers (install/run/boot setup).
+
+## Architecture
+
+- `server.js` — Express server serving `public/`, plus small REST endpoints (fencer photo upload, etc.).
+- `public/js/opp2.js` — OPP2 protocol library: MQTT topic parsing (`openpiste/{piste_id}/{publisher}/{message_type}`,
+  publisher ∈ apparatus/software/remote), JSON deserialization per message type, and a `Dispatcher` that routes
+  parsed messages to registered callbacks and updates a `SystemState` snapshot.
+- `public/main.js` — the piste display (`index.html`). Connects via Paho MQTT over WebSocket, subscribes to
+  `openpiste/{piste}/apparatus/#`, and drives both the v1 (default) and v2 (`?layout=v2`) boards from the same
+  OPP2 message handlers.
+- `public/style-v2.css` / the `.v2-board` markup in `index.html` — an alternative single-strip layout, toggled via
+  `?layout=v2` (see `body.layout-v2` rules in `style.css`). This was ported from an approved Claude Artifact mockup;
+  class names, `clip-path` polygon percentages, and the `--stroke` custom property are coupled to each other by
+  design — don't rename/restructure them casually.
+- `public/overview.html` — multi-piste grid. Auto-discovers online pistes via `openpiste/+/apparatus/connection`,
+  but note it does **not** go through `OPP2.Deserializer` — it only uses `OPP2.TopicParser.parse()` for the topic
+  and then hand-parses the JSON payload itself (`data.online`). `main.js`, by contrast, routes everything through
+  `OPP2.Dispatcher.dispatch()` → `OPP2.Deserializer.deserialize()`. These two paths can diverge in what payload
+  shapes they accept — keep this in mind if a message type behaves correctly on one page but not the other.
+
+## OPP2 CONNECTION messages are a special case
+
+The `connection` message type (topic `openpiste/{piste}/apparatus/connection`) is often delivered as the MQTT
+broker's Last Will (LWT) for the device's own client, published automatically when its connection drops. LWT
+payloads are static, defined once at connect time, so real ones on this broker are frequently bare
+(e.g. `{"online": false}`) — no `protocol`/`version`/`seq` envelope. `OPP2.Deserializer.deserialize()` therefore
+skips the protocol-envelope check specifically for `CONNECTION` (every other message type still requires
+`protocol: "OPP2"`). Don't reintroduce a blanket protocol check without preserving that exception.
+
+There are two independent "online" concepts, both surfaced in the v2 layout footer:
+- **Scoring device connection** (`v2-connDot`, next to the state badge) — from the OPP2 `connection` message above.
+- **Broker link** (`v2-brokerDot`, next to the Piste label) — whether *this page's own* MQTT client is connected,
+  tracked via `mqttConnect()` / `client.onConnectionLost` in `main.js`. Not derived from any OPP2 message.
+
+## Paho MQTT gotchas (mqttws31.min.js)
+
+- `client.connect()` mutates the options object it's given and throws synchronously
+  (`AMQJS0011E Invalid state already connected`) if called while already connected — build a fresh options object
+  per attempt, and guard reconnect logic with `client.isConnected()` before calling.
+- A clean `client.disconnect()` still triggers `onConnectionLost` in the bundled Paho build here, so reconnect
+  logic doesn't need a separate code path for "intentional" vs. "unexpected" disconnects.
+
+## Local dev/testing
+
+- A local mosquitto broker runs on this machine: `1883` (plain TCP), `9001` (plain WS), `8883` (MQTTS) — see
+  `config.json` for the URL the server-side code expects.
+- `node test-publisher.js [piste_id]` publishes a simulated OPP2 bout (fencers/match/score/clock/lights/UW2F) to a
+  given piste for manual testing, and sends `connection` online:true on connect / offline:false on Ctrl+C.
+- To inspect what's actually retained on the broker (e.g. to check a real payload shape rather than assume it):
+  `mosquitto_sub -h localhost -p 1883 -t 'openpiste/#' -v --retained-only`.
+
+## Working-tree hygiene
+
+This checkout regularly carries pending, unrelated changes (currently `install.sh`, `package-lock.json`, and a
+handful of untracked screenshot/SVG/script files from other in-progress work). When asked to commit, scope the
+commit to the files actually touched for the task at hand — don't sweep these in.
