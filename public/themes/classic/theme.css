@@ -1,8 +1,14 @@
 /* "classic" theme: the original look, extracted into tokens.
    A theme defines chrome only (see css/signal.css for the fixed signal
    colours). Structure lives in style.css / style-v2.css and must reference
-   these tokens, never raw colours. */
+   these tokens, never raw colours.
+
+   Modes: the base block below is the dark ("night") palette and doubles as
+   the fallback before/without js/prefs.js. The light ("day") palette is an
+   override scoped to [data-mode="light"]; prefs.js sets data-theme and
+   data-mode on <html> ("auto" is resolved to light/dark there). */
 :root {
+    color-scheme: dark;
     --font-body: Arial, Helvetica, sans-serif;
 
     /* board chrome */
@@ -15,6 +21,7 @@
     --control-bg: #444;
     --control-border: #666;
     --control-text: white;
+    --clock-glow: 0 0 25px #fff;
 
     /* v2 board chrome */
     --void: #050608;
@@ -26,6 +33,9 @@
     --dot-off: #3a3f46;
     --badge-bg: rgba(255, 255, 255, 0.1);
     --badge-ink: #e8eef2;
+    --timer-ink: #3fe8ff;
+    --card-idle: rgba(255, 255, 255, 0.08);
+    --flag-ring: rgba(255, 255, 255, 0.25);
 
     /* overview page chrome */
     --ov-bg: #111;
@@ -35,4 +45,41 @@
     --ov-btn-bg: #333;
     --ov-btn-border: #555;
     --ov-btn-hover: #444;
+}
+
+:root[data-theme="classic"][data-mode="light"] {
+    color-scheme: light;
+
+    /* board chrome */
+    --page-bg: #dfe4ea;
+    --board-bg: #f7f9fb;
+    --text: #111a22;
+    --accent: #8a5a00;
+    --photo-bg: #e6eaee;
+    --photo-border: #b7c0c9;
+    --control-bg: #fff;
+    --control-border: #a9b3bd;
+    --control-text: #111a22;
+    --clock-glow: none;
+
+    /* v2 board chrome */
+    --void: #f4f6f8;
+    --idle-ink: #1b2b3a;
+    --divider: rgba(0, 0, 0, 0.12);
+    --caption: rgba(0, 0, 0, 0.55);
+    --dot-off: #b4bcc5;
+    --badge-bg: rgba(0, 0, 0, 0.08);
+    --badge-ink: #1b2b3a;
+    --timer-ink: #00728f;
+    --card-idle: rgba(0, 0, 0, 0.08);
+    --flag-ring: rgba(0, 0, 0, 0.25);
+
+    /* overview page chrome */
+    --ov-bg: #eef1f5;
+    --ov-header-bg: #fff;
+    --ov-title: #0a6a58;
+    --ov-link: #0a6a58;
+    --ov-btn-bg: #fff;
+    --ov-btn-border: #b5bec8;
+    --ov-btn-hover: #e6ebf0;
 }

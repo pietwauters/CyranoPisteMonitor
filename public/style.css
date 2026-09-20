@@ -21,7 +21,8 @@
 }
 
 :fullscreen #fullscreen-btn,
-:fullscreen #piste-select {
+:fullscreen #piste-select,
+:fullscreen .prefs-ui {
     display: none;
 }
 
@@ -76,6 +77,10 @@ body.layout-v2 .scoring-container .v2-board { display: grid; }
 
 body.embed-mode {
     background: var(--board-bg);
+}
+
+body.embed-mode .prefs-ui {
+    display: none;
 }
 
 body.embed-mode .scoring-container {
@@ -163,7 +168,7 @@ h4.poolNum {
 }
 
 .smName {
-    color: var(--text);
+    color: var(--side-ink);
     font-size: 8vmin;
     width: 50%;
     box-sizing: border-box;
@@ -264,7 +269,7 @@ h4.poolNum {
     color: var(--text);
     font-size: 15vmin;
     margin: 5;
-    text-shadow: 0 0 25px var(--text);
+    text-shadow: var(--clock-glow);
 }
 
 .smPeriod {

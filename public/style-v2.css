@@ -206,7 +206,7 @@
   width: 18cqh;
   height: 12cqh;
   border-radius: 3px;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 0 1px var(--flag-ring);
   flex: none;
 }
 
@@ -231,7 +231,7 @@
   width: 5cqh;
   height: 6.8cqh;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--card-idle);
   opacity: 0.25;
   display: flex;
   align-items: center;
@@ -408,6 +408,6 @@
   font-variant-numeric: tabular-nums;
   font-size: 7.4cqh;
   font-weight: 700;
-  color: var(--cyan-timer);
+  color: var(--timer-ink);
   line-height: 1;
 }

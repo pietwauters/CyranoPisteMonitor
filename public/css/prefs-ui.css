@@ -1,0 +1,24 @@
+/* Selector control built by js/prefs-ui.js. Floating bottom-right by
+   default (piste display); pages with a header (overview) override the
+   position and button colours locally. */
+.prefs-ui {
+    position: fixed;
+    bottom: 1vmin;
+    right: 2vmin;
+    z-index: 1000;
+    display: flex;
+    gap: 1vmin;
+    font-family: var(--font-body);
+    font-size: max(12px, 1.8vmin);
+}
+
+.prefs-ui button,
+.prefs-ui select {
+    padding: 0.5vmin 1.2vmin;
+    font: inherit;
+    color: var(--control-text);
+    background: var(--control-bg);
+    border: 1px solid var(--control-border);
+    border-radius: 0.5vmin;
+    cursor: pointer;
+}
