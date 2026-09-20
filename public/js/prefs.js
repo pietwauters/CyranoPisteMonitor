@@ -18,8 +18,20 @@
   var THEMES = { classic: '/themes/classic/theme.css' };
   var MODES = ['dark', 'light', 'auto'];
   var LANGS = ['en', 'fr', 'es'];
-  var DEFAULTS = { theme: 'classic', mode: 'dark', lang: 'en' };
   var OPTIONS = { theme: Object.keys(THEMES), mode: MODES, lang: LANGS };
+
+  // First visit: use the browser's language if supported (like the FIE site),
+  // else English. Displays that must not depend on the browser pin ?lang=.
+  function browserLang() {
+    var prefs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language];
+    for (var i = 0; i < prefs.length; i++) {
+      var code = String(prefs[i] || '').slice(0, 2).toLowerCase();
+      if (LANGS.indexOf(code) !== -1) return code;
+    }
+    return 'en';
+  }
+
+  var DEFAULTS = { theme: 'classic', mode: 'dark', lang: browserLang() };
   var STORE_KEY = 'mqttweb.prefs';
 
   var root = document.documentElement;

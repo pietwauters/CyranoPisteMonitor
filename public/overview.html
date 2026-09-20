@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Overview - Strip Grid</title>
+    <title data-i18n="title.overview">Overview - Strip Grid</title>
     <link rel="stylesheet" href="/css/signal.css">
     <link rel="stylesheet" href="/themes/classic/theme.css" id="theme-css">
     <script src="/js/prefs.js"></script>
@@ -112,15 +112,16 @@
 
 <body>
     <div class="header">
-        <h1>Strips Overview</h1>
-        <button id="fullscreen-btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
-        <a href="/" class="back-link">← Display</a>
+        <h1 data-i18n="overview.heading">Strips Overview</h1>
+        <button id="fullscreen-btn" onclick="toggleFullscreen()">⛶ <span data-i18n="fullscreen">Fullscreen</span></button>
+        <a href="/" class="back-link" data-i18n="nav.display">← Display</a>
     </div>
 
     <div class="overview-grid" id="grid"></div>
 
     <script src="/js/mqttws31.min.js"></script>
     <script src="/js/opp2.js"></script>
+    <script src="/js/i18n.js"></script>
     <script src="/js/prefs-ui.js"></script>
     <script>
         const params = new URLSearchParams(location.search);

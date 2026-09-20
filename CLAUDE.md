@@ -21,6 +21,28 @@ Guidance for working in this repo, beyond what README.md already covers (install
   `OPP2.Dispatcher.dispatch()` → `OPP2.Deserializer.deserialize()`. These two paths can diverge in what payload
   shapes they accept — keep this in mind if a message type behaves correctly on one page but not the other.
 
+## Theming, day/night and i18n
+
+Three independent user choices — **look** (`theme`), **mode** (`dark`/`light`/`auto`) and **language**
+(`en`/`fr`/`es`) — are resolved by `public/js/prefs.js` and exposed as `data-theme`, `data-mode` and `lang` on
+`<html>` (set in `<head>` before first paint). Precedence: choice made on the page > URL (`?theme=&mode=&lang=`,
+never saved) > `localStorage` > default (classic / dark / browser language). `?layout=v2` is a separate axis.
+
+- **Colours are tokens, never literals.** `public/css/signal.css` holds the fixed signal colours (fencer sides,
+  lamps, cards, frames, UW2F) — deliberately not themable. `public/themes/<name>/theme.css` holds chrome only
+  (backgrounds, text, accents, fonts); the base `:root` block is the dark palette and
+  `:root[data-theme="…"][data-mode="light"]` overrides it. `style.css`/`style-v2.css` must only use `var(--…)`.
+- **Adding a look:** copy `themes/classic/`, change token values, register it in `THEMES` in `prefs.js`. The look
+  dropdown in `prefs-ui.js` appears automatically once there are two.
+- **Overview tiles are iframes** of `/piste/N?embed=1`; the parent pushes its prefs via `postMessage` (children say
+  `prefs-hello` on load), so a choice on the overview reaches every tile. Embedded pages ignore their own saved choice
+  in favour of the parent's.
+- **i18n:** flat JSON dictionaries in `public/i18n/<lang>.json`; English is always loaded as fallback. Static markup
+  uses `data-i18n` / `data-i18n-title` / `data-i18n-alt`; script text uses `I18n.t(key, {n})`. Text built by script
+  must be re-rendered inside an `I18n.subscribe(...)` callback (see the bottom of `updateMatch` in `main.js`).
+  Keep key sets identical across the three files. FR/ES strings are unreviewed by native fencing speakers.
+- Not themed/translated yet: `admin.html`, `piste-mgt.html`. Apparatus state letters (W/H/P/E) are codes, not words.
+
 ## OPP2 CONNECTION messages are a special case
 
 The `connection` message type (topic `openpiste/{piste}/apparatus/connection`) is often delivered as the MQTT

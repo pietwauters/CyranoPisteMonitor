@@ -1,6 +1,7 @@
 // OPP2 Fencing Display - main.js
 
 let currentPiste = "";
+let lastMatch = null;   // kept so the bout/period sub-line can be re-rendered on a language change
 let displayedPiste = "";
 // Loopback is always secure — skip WSS to avoid cert issues on localhost
 const useSSL = location.protocol === 'https:' &&
@@ -122,7 +123,7 @@ function mqttConnect() {
       setBrokerOnline(true);
       if (currentPiste) {
         client.subscribe(`openpiste/${currentPiste}/apparatus/#`);
-        document.querySelector('.poolNum').textContent = `Strip ${currentPiste}`;
+        setPisteLabel();
         if (elements.v2.footerPisteVal) elements.v2.footerPisteVal.textContent = currentPiste;
         loadFencerPhotos();
       }
@@ -151,7 +152,7 @@ window.onload = function () {
   for (let i = 1; i <= 999; i++) {
     const option = document.createElement('option');
     option.value = i.toString();
-    option.text = `Piste ${i}`;
+    option.text = I18n.t('piste.option', { n: i });
     pisteSelect.appendChild(option);
   }
 
@@ -177,7 +178,7 @@ document.getElementById('piste-select').addEventListener('change', (e) => {
     displayedPiste = newPiste;
     client.subscribe(`openpiste/${currentPiste}/apparatus/#`);
     resetDisplay();
-    document.querySelector('.poolNum').textContent = `Strip ${currentPiste}`;
+    setPisteLabel();
     if (elements.v2.footerPisteVal) elements.v2.footerPisteVal.textContent = currentPiste;
     loadFencerPhotos();
   }
@@ -331,6 +332,7 @@ function checkAndPlayBuzzer() {
 }
 
 function resetDisplay() {
+  lastMatch = null;
   elements.leftName.textContent = "";
   elements.rightName.textContent = "";
   elements.leftScore.textContent = "0";
@@ -478,10 +480,32 @@ function updateMatch(message) {
   // phase_type's full value set isn't documented anywhere in this codebase
   // (test-publisher.js's only sample uses 'DE') -- revisit this mapping once
   // real phase_type values from the field are confirmed.
-  const ctx = deriveV2Context(message);
+  lastMatch = message;
+  renderMatchContext();
+}
+
+function renderMatchContext() {
+  if (!lastMatch) return;
+  const ctx = deriveV2Context(lastMatch);
   if (elements.v2.footerPouleVal) elements.v2.footerPouleVal.textContent = ctx.poule;
   if (elements.v2.footerSubline) elements.v2.footerSubline.textContent = ctx.subline;
 }
+
+function setPisteLabel() {
+  if (!currentPiste) return;
+  document.querySelector('.poolNum').textContent = I18n.t('strip.label', { n: currentPiste });
+}
+
+// Text built here (not in the markup) has to be re-rendered when the
+// language changes; runs once the dictionaries are loaded, then on every change.
+I18n.subscribe(() => {
+  const select = document.getElementById('piste-select');
+  for (const option of select.options) {
+    if (option.value) option.text = I18n.t('piste.option', { n: option.value });
+  }
+  setPisteLabel();
+  renderMatchContext();
+});
 
 function updateUW2F(message) {
   if (elements.uw2fTimer) {
@@ -602,11 +626,11 @@ function deriveV2Context(message) {
   const type = (message.phase_type || '').toLowerCase();
   let subline;
   if (type.includes('poule') || type.includes('pool')) {
-    subline = 'Bout ' + message.match;
+    subline = I18n.t('subline.bout', { n: message.match });
   } else if (type.includes('team') || type.includes('relay')) {
-    subline = 'Relay ' + message.round;
+    subline = I18n.t('subline.relay', { n: message.round });
   } else {
-    subline = 'Period ' + message.round; // default, matches v1's existing round-as-period display
+    subline = I18n.t('subline.period', { n: message.round }); // default, matches v1's existing round-as-period display
   }
   return { poule: String(poule), subline };
 }
