@@ -4,12 +4,14 @@
 <head>
     <meta charset="utf-8">
     <title>Overview - Strip Grid</title>
+    <link rel="stylesheet" href="/css/signal.css">
+    <link rel="stylesheet" href="/themes/classic/theme.css">
     <style>
         body {
             margin: 0;
-            background: #111;
-            color: #fff;
-            font-family: Arial, Helvetica, sans-serif
+            background: var(--ov-bg);
+            color: var(--text);
+            font-family: var(--font-body)
         }
 
         .header {
@@ -17,20 +19,20 @@
             align-items: center;
             gap: 12px;
             padding: 12px;
-            background: #0d0d0d
+            background: var(--ov-header-bg)
         }
 
         .header h1 {
             margin: 0;
             font-size: 18px;
-            color: #8fd
+            color: var(--ov-title)
         }
 
         #fullscreen-btn {
             margin-left: auto;
-            background: #333;
-            color: #fff;
-            border: 1px solid #555;
+            background: var(--ov-btn-bg);
+            color: var(--text);
+            border: 1px solid var(--ov-btn-border);
             border-radius: 6px;
             padding: 6px 12px;
             cursor: pointer;
@@ -38,7 +40,13 @@
         }
 
         #fullscreen-btn:hover {
-            background: #444;
+            background: var(--ov-btn-hover);
+        }
+
+        .back-link {
+            color: var(--ov-link);
+            text-decoration: none;
+            margin-left: 8px
         }
 
         .overview-grid {
@@ -80,7 +88,7 @@
     <div class="header">
         <h1>Strips Overview</h1>
         <button id="fullscreen-btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
-        <a href="/" style="color:#9fd;text-decoration:none;margin-left:8px">← Display</a>
+        <a href="/" class="back-link">← Display</a>
     </div>
 
     <div class="overview-grid" id="grid"></div>

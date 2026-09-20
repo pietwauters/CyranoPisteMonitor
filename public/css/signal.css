@@ -1,0 +1,46 @@
+/* Signal colours: fencer sides, lamps, cards, frames, UW2F timer.
+   These carry meaning on the piste (red/green fencer, light states, card
+   levels) and must stay recognisable and legible, so they are deliberately
+   NOT part of any theme. Themes (public/themes/<name>/theme.css) only
+   restyle chrome: backgrounds, text, accents, typography. */
+:root {
+    /* v1 board */
+    --side-left-bg: #900;
+    --side-right-bg: #060;
+    --priority-left: #ff0000;
+    --priority-right: #00ff00;
+    --lamp-yellow: #ff0;
+    --lamp-red: #f00;
+    --lamp-green: #0f0;
+    --lamp-white: #fff;
+    --card-ink: #000;
+    --uw2f-red: #f00;
+    --uw2f-green: #0f0;
+    --uw2f-orange: #ffa500;
+    --state-ending: #f00;
+    --frame-red: #ff0000;
+    --frame-green: #00ff00;
+    --frame-yellow: #ff0;
+    --frame-blue: #00f;
+    --frame-gold: #d4af37;
+
+    /* v2 board */
+    --red-idle: #ff4a2b;
+    --red-lit-a: #ff2510;
+    --red-lit-b: #ff6a3d;
+
+    --green-idle: #2fe04a;
+    --green-lit-a: #12c62d;
+    --green-lit-b: #6dfa7d;
+
+    --white-lit-a: #e9eef1;
+    --white-lit-b: #ffffff;
+
+    --cyan-timer: #3fe8ff;
+    --uw2f-ok: #2fe04a;
+    --uw2f-warn: #ffb020;
+    --uw2f-danger: #ff3b30;
+
+    --yellow-card: #ffd400;
+    --red-card: #ff2d1a;
+}

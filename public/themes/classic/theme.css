@@ -1,0 +1,38 @@
+/* "classic" theme: the original look, extracted into tokens.
+   A theme defines chrome only (see css/signal.css for the fixed signal
+   colours). Structure lives in style.css / style-v2.css and must reference
+   these tokens, never raw colours. */
+:root {
+    --font-body: Arial, Helvetica, sans-serif;
+
+    /* board chrome */
+    --page-bg: #333;
+    --board-bg: #000;
+    --text: #fff;
+    --accent: #ff0;
+    --photo-bg: #222;
+    --photo-border: #444;
+    --control-bg: #444;
+    --control-border: #666;
+    --control-text: white;
+
+    /* v2 board chrome */
+    --void: #050608;
+    --idle-ink: #cdeeff;
+    --lit-ink: #fbffff;
+    --invalid-ink: #10141a;
+    --divider: rgba(255, 255, 255, 0.09);
+    --caption: rgba(255, 255, 255, 0.42);
+    --dot-off: #3a3f46;
+    --badge-bg: rgba(255, 255, 255, 0.1);
+    --badge-ink: #e8eef2;
+
+    /* overview page chrome */
+    --ov-bg: #111;
+    --ov-header-bg: #0d0d0d;
+    --ov-title: #8fd;
+    --ov-link: #9fd;
+    --ov-btn-bg: #333;
+    --ov-btn-border: #555;
+    --ov-btn-hover: #444;
+}

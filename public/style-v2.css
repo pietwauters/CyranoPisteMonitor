@@ -6,33 +6,6 @@
    percentages are all coupled to each other and safer left untouched. */
 
 .v2-board {
-  --void: #050608;
-  --idle-ink: #cdeeff;
-  --lit-ink: #fbffff;
-
-  --red-idle: #ff4a2b;
-  --red-lit-a: #ff2510;
-  --red-lit-b: #ff6a3d;
-
-  --green-idle: #2fe04a;
-  --green-lit-a: #12c62d;
-  --green-lit-b: #6dfa7d;
-
-  --white-lit-a: #e9eef1;
-  --white-lit-b: #ffffff;
-  --invalid-ink: #10141a;
-
-  --cyan-timer: #3fe8ff;
-  --uw2f-ok: #2fe04a;
-  --uw2f-warn: #ffb020;
-  --uw2f-danger: #ff3b30;
-
-  --yellow-card: #ffd400;
-  --red-card: #ff2d1a;
-
-  --divider: rgba(255, 255, 255, 0.09);
-  --caption: rgba(255, 255, 255, 0.42);
-
   --stroke: 1.4cqw;
 
   container-type: size;
@@ -199,7 +172,7 @@
 .v2-board .band--right .band-content { align-items: flex-end; text-align: right; }
 
 .v2-board .fencer-name {
-  font-family: "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-narrow, "Arial Narrow", "Helvetica Neue", Arial, sans-serif);
   font-size: 12cqh;
   line-height: 1;
   white-space: nowrap;
@@ -279,7 +252,7 @@
 }
 
 .v2-board .card-letter {
-  font-family: "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-narrow, "Arial Narrow", "Helvetica Neue", Arial, sans-serif);
   font-size: 4cqh;
   font-weight: 800;
   line-height: 1;
@@ -342,7 +315,7 @@
   width: 1.1cqh;
   height: 1.1cqh;
   border-radius: 50%;
-  background: #3a3f46;
+  background: var(--dot-off);
   transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -380,8 +353,8 @@
   line-height: 1;
   padding: 0.6cqh 1.3cqh;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #e8eef2;
+  background: var(--badge-bg);
+  color: var(--badge-ink);
   letter-spacing: 0.05em;
 }
 
@@ -402,7 +375,7 @@
   width: 1.6cqh;
   height: 1.6cqh;
   border-radius: 50%;
-  background: #3a3f46;
+  background: var(--dot-off);
   transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
