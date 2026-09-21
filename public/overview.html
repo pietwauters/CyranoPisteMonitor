@@ -24,6 +24,14 @@
             background: var(--ov-header-bg)
         }
 
+        .brand-logo {
+            display: var(--logo-display, none);
+            flex: none;
+            width: 90px;
+            height: 36px;
+            background: var(--logo, none) left center / contain no-repeat
+        }
+
         .header h1 {
             margin: 0;
             font-size: 18px;
@@ -112,6 +120,7 @@
 
 <body>
     <div class="header">
+        <span class="brand-logo" role="img" aria-label="FIE"></span>
         <h1 data-i18n="overview.heading">Strips Overview</h1>
         <button id="fullscreen-btn" onclick="toggleFullscreen()">⛶ <span data-i18n="fullscreen">Fullscreen</span></button>
         <a href="/" class="back-link" data-i18n="nav.display">← Display</a>

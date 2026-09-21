@@ -1,0 +1,106 @@
+/* "fie" theme: colours, type and logo taken from fie.org (sampled from the
+   live site: night is the site's default, day is a light page).
+   Tokens only -- structure (pill header, card tiles, gradient sections) is
+   not part of this theme yet. Signal colours stay in css/signal.css.
+
+   Palette: brand-blue #0e3790 / #05122e, brand-sky #0099e0 / #0281c0 /
+   #1fb0ff, neutrals = Tailwind slate, gold #e7c661.
+   Font: League Spartan (SIL Open Font License), self-hosted so this app has
+   no runtime dependency on fie.org.
+   Logo: FIE logo SVGs (fie-logo-light = white, for dark backgrounds). */
+
+@font-face {
+    font-family: "League Spartan Variable";
+    src: url("fonts/LeagueSpartanVariable.woff2") format("woff2");
+    font-display: swap;
+    font-weight: 100 900;
+}
+
+/* Night (fie.org's default look); also the fallback before prefs.js runs. */
+:root {
+    color-scheme: dark;
+    --font-body: "League Spartan Variable", "League Spartan", sans-serif;
+    --font-narrow: "League Spartan Variable", "League Spartan", sans-serif;
+
+    /* board chrome */
+    --page-bg: #0f162a;
+    --board-bg: #05122e;
+    --text: #e1e7ef;
+    --accent: #e7c661;
+    --photo-bg: #1d293d;
+    --photo-border: #314158;
+    --control-bg: #314158;
+    --control-border: #45556c;
+    --control-text: #fff;
+    --clock-glow: 0 0 25px rgba(31, 176, 255, 0.55);
+
+    /* v2 board chrome */
+    --void: #040e25;
+    --idle-ink: #e1e7ef;
+    --lit-ink: #fff;
+    --invalid-ink: #05122e;
+    --divider: rgba(225, 231, 239, 0.1);
+    --caption: rgba(225, 231, 239, 0.5);
+    --dot-off: #45556c;
+    --badge-bg: rgba(225, 231, 239, 0.1);
+    --badge-ink: #e1e7ef;
+    --timer-ink: #1fb0ff;
+    --card-idle: rgba(225, 231, 239, 0.08);
+    --flag-ring: rgba(225, 231, 239, 0.25);
+
+    /* overview page chrome */
+    --ov-bg: #0f162a;
+    --ov-header-bg: #05122e;
+    --ov-title: #fff;
+    --ov-link: #1fb0ff;
+    --ov-btn-bg: rgba(225, 231, 239, 0.06);
+    --ov-btn-border: #45556c;
+    --ov-btn-hover: rgba(225, 231, 239, 0.14);
+
+    /* brand (absolute paths: a url() inside a custom property resolves
+       against the page that uses it, not against this file) */
+    --logo: url("/themes/fie/img/fie-logo-light.svg");
+    --logo-display: block;
+}
+
+/* Day: light page, dark-blue accents. */
+:root[data-theme="fie"][data-mode="light"] {
+    color-scheme: light;
+
+    /* board chrome */
+    --page-bg: #f1f5f9;
+    --board-bg: #fff;
+    --text: #0f162a;
+    --accent: #8f6f00;
+    --photo-bg: #e2e8f0;
+    --photo-border: #cbd5e1;
+    --control-bg: #fff;
+    --control-border: #cbd5e1;
+    --control-text: #0f162a;
+    --clock-glow: none;
+
+    /* v2 board chrome */
+    --void: #f1f5f9;
+    --idle-ink: #0f162a;
+    --invalid-ink: #0f162a;
+    --divider: rgba(15, 22, 42, 0.12);
+    --caption: rgba(15, 22, 42, 0.55);
+    --dot-off: #94a3b8;
+    --badge-bg: rgba(15, 22, 42, 0.08);
+    --badge-ink: #0f162a;
+    --timer-ink: #00699e;
+    --card-idle: rgba(15, 22, 42, 0.08);
+    --flag-ring: rgba(15, 22, 42, 0.25);
+
+    /* overview page chrome */
+    --ov-bg: #f1f5f9;
+    --ov-header-bg: #fff;
+    --ov-title: #0e3790;
+    --ov-link: #144dc8;
+    --ov-btn-bg: #fff;
+    --ov-btn-border: #cbd5e1;
+    --ov-btn-hover: #e2e8f0;
+
+    /* brand */
+    --logo: url("/themes/fie/img/fie-logo.svg");
+}

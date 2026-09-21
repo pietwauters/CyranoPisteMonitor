@@ -32,8 +32,15 @@ never saved) > `localStorage` > default (classic / dark / browser language). `?l
   lamps, cards, frames, UW2F) — deliberately not themable. `public/themes/<name>/theme.css` holds chrome only
   (backgrounds, text, accents, fonts); the base `:root` block is the dark palette and
   `:root[data-theme="…"][data-mode="light"]` overrides it. `style.css`/`style-v2.css` must only use `var(--…)`.
-- **Adding a look:** copy `themes/classic/`, change token values, register it in `THEMES` in `prefs.js`. The look
-  dropdown in `prefs-ui.js` appears automatically once there are two.
+- **Adding a look:** copy `themes/classic/`, change token values, register it in `THEMES` in `prefs.js` (and a
+  display name in `THEME_NAME` in `prefs-ui.js`). The look dropdown appears once there are two.
+- **`fie` theme** (`themes/fie/`): palette/type sampled from fie.org — night is their default, day is a white page.
+  Font (League Spartan, OFL) and logo SVGs are self-hosted in the theme folder, so the app has no runtime
+  dependency on fie.org (it is meant to run on a separate server). Select with `?theme=fie`; the default look is
+  still `classic`. Tokens only: FIE's pill header / card tiles / gradient sections are not implemented.
+- **Gotcha:** a `url()` inside a custom property (e.g. `--logo`) resolves against the page *using* the variable,
+  not the theme file — use absolute `/themes/<name>/…` paths there. (`@font-face` urls are fine relative.)
+  The overview header has an empty `.brand-logo` slot that shows `--logo` when a theme defines it.
 - **Overview tiles are iframes** of `/piste/N?embed=1`; the parent pushes its prefs via `postMessage` (children say
   `prefs-hello` on load), so a choice on the overview reaches every tile. Embedded pages ignore their own saved choice
   in favour of the parent's.

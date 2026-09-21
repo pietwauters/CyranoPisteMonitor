@@ -15,7 +15,7 @@
 (function () {
   'use strict';
 
-  var THEMES = { classic: '/themes/classic/theme.css' };
+  var THEMES = { classic: '/themes/classic/theme.css', fie: '/themes/fie/theme.css' };
   var MODES = ['dark', 'light', 'auto'];
   var LANGS = ['en', 'fr', 'es'];
   var OPTIONS = { theme: Object.keys(THEMES), mode: MODES, lang: LANGS };

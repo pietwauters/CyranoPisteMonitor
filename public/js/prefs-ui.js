@@ -11,6 +11,7 @@
   var MODE_ICON = { dark: '☾', light: '☀', auto: '◐' };
   // Language names are shown in their own language, never translated.
   var LANG_NAME = { en: 'English', fr: 'Français', es: 'Español' };
+  var THEME_NAME = { classic: 'Classic', fie: 'FIE' };
   var t = window.I18n ? I18n.t : function (key) { return key; };
 
   var box = document.createElement('div');
@@ -22,7 +23,7 @@
     Prefs.THEMES.forEach(function (name) {
       var opt = document.createElement('option');
       opt.value = name;
-      opt.textContent = name;
+      opt.textContent = THEME_NAME[name] || name;
       themeSelect.appendChild(opt);
     });
     themeSelect.addEventListener('change', function () { Prefs.set('theme', themeSelect.value); });
