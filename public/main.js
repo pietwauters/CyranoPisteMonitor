@@ -160,6 +160,9 @@ window.onload = function () {
     pisteSelect.style.display = 'none';
     document.getElementById('fullscreen-btn').style.top = '2vmin';
     document.getElementById('fullscreen-btn').style.left = '2vmin';
+    // style.css also pins the button with right: 2vmin; without releasing it the
+    // left+right pair stretches the button across the whole viewport.
+    document.getElementById('fullscreen-btn').style.right = 'auto';
     currentPiste = urlPiste;
     displayedPiste = urlPiste;
     pisteSelect.value = urlPiste;
