@@ -3,12 +3,9 @@
 let currentPiste = "";
 let lastMatch = null;   // kept so the bout/period sub-line can be re-rendered on a language change
 let displayedPiste = "";
-// Loopback is always secure — skip WSS to avoid cert issues on localhost
-const useSSL = location.protocol === 'https:' &&
-               location.hostname !== 'localhost' &&
-               location.hostname !== '127.0.0.1';
-const port = useSSL ? 9002 : 9001;
-const client = new Paho.MQTT.Client(location.hostname, port, "fencingDisplay_" + Date.now());
+// MQTT to the local broker by default, or whatever the host page declares
+// (see js/source.js).
+const source = OPP2Source.fromPage();
 
 // OPP2 dispatcher and system state
 const dispatcher = new OPP2.Dispatcher();
@@ -79,9 +76,8 @@ dispatcher.onError = (error, topic, detail) => {
   console.error('OPP2 dispatch error:', error, topic, detail);
 };
 
-// MQTT message handler - dispatch to OPP2
-client.onMessageArrived = (message) => {
-  dispatcher.dispatch(message.destinationName, message.payloadString);
+source.onMessage = (topic, payload) => {
+  dispatcher.dispatch(topic, payload);
 };
 
 function padPisteId(id) {
@@ -104,43 +100,18 @@ if (new URLSearchParams(window.location.search).get('layout') === 'v2') {
 }
 
 // Broker link status is distinct from the scoring device's own OPP2
-// CONNECTION status: this tracks whether *this page* has a live MQTT
-// connection at all. Paho mutates the options object passed to connect(),
-// so a fresh object is built on every attempt (same gotcha as overview.html).
+// CONNECTION status: this tracks whether *this page* has a live link to its
+// message source at all.
 function setBrokerOnline(online) {
   if (elements.v2.brokerDot) elements.v2.brokerDot.classList.toggle('online', online);
 }
+source.onLink = setBrokerOnline;
 
-function mqttConnect() {
-  // Guards against a stale scheduled retry firing after the client already
-  // reconnected through another path (e.g. overlapping connection-lost
-  // events) -- Paho throws synchronously if connect() is called while
-  // already connected.
-  if (client.isConnected()) return;
-  client.connect({
-    useSSL: useSSL,
-    onSuccess: () => {
-      setBrokerOnline(true);
-      if (currentPiste) {
-        client.subscribe(`openpiste/${currentPiste}/apparatus/#`);
-        setPisteLabel();
-        if (elements.v2.footerPisteVal) elements.v2.footerPisteVal.textContent = currentPiste;
-        loadFencerPhotos();
-      }
-    },
-    onFailure: (err) => {
-      console.error("Connection failed:", err);
-      setBrokerOnline(false);
-      setTimeout(mqttConnect, 5000);
-    }
-  });
-}
-
-client.onConnectionLost = (response) => {
-  setBrokerOnline(false);
-  if (response.errorCode !== 0) {
-    console.warn('MQTT connection lost, reconnecting…', response.errorMessage);
-    setTimeout(mqttConnect, 5000);
+source.onConnected = () => {
+  if (currentPiste) {
+    setPisteLabel();
+    if (elements.v2.footerPisteVal) elements.v2.footerPisteVal.textContent = currentPiste;
+    loadFencerPhotos();
   }
 };
 
@@ -167,19 +138,16 @@ window.onload = function () {
     displayedPiste = urlPiste;
     pisteSelect.value = urlPiste;
   }
-  mqttConnect();
+  source.start(currentPiste);
   handleResize();
 };
 
 document.getElementById('piste-select').addEventListener('change', (e) => {
   const newPiste = e.target.value;
   if (newPiste && newPiste !== currentPiste) {
-    if (currentPiste) {
-      client.unsubscribe(`openpiste/${currentPiste}/apparatus/#`);
-    }
+    source.setPiste(newPiste);
     currentPiste = newPiste;
     displayedPiste = newPiste;
-    client.subscribe(`openpiste/${currentPiste}/apparatus/#`);
     resetDisplay();
     setPisteLabel();
     if (elements.v2.footerPisteVal) elements.v2.footerPisteVal.textContent = currentPiste;
@@ -743,7 +711,7 @@ function updateFlag(flagElement, nocCode) {
 }
 
 function loadFencerPhotos() {
-  if (!currentPiste) return;
+  if (!currentPiste || !source.photos) return;
   loadPhoto('left', currentPiste);
   loadPhoto('right', currentPiste);
 }
