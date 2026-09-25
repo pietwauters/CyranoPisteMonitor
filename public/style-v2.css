@@ -20,6 +20,22 @@
   position: relative;
 }
 
+/* --u is the unit every v2 size is a multiple of (it replaces cqh). On a 16:9
+   board it equals 1cqh exactly, so the approved design is unchanged; on a
+   narrower board it follows the width instead, so the full content always
+   fits. It's declared on the board's children (not on .v2-board) so that the
+   container units resolve against .v2-board itself, and so the portrait rule
+   below (a container query can only style descendants) can override it. */
+.v2-board > * { --u: min(1cqh, 0.5625cqw); }
+
+/* Portrait board: the bands are narrow and tall, so the first name moves to
+   its own line under the surname, and the unit is capped by both width and
+   height (two name lines + the score row must fit a band). */
+@container board (aspect-ratio < 1) {
+  .v2-board > * { --u: min(0.75cqh, 1.15cqw); }
+  .v2-board .fencer-name .firstname { display: block; margin-left: 0; margin-top: 0.15em; }
+}
+
 .v2-board .band {
   position: relative;
   overflow: hidden;
@@ -40,13 +56,13 @@
 .v2-board .band--left .edge-pill {
   left: 1cqw;
   background: linear-gradient(var(--red-idle), var(--red-idle));
-  box-shadow: 0 0 1.4cqh var(--red-idle);
+  box-shadow: 0 0 calc(1.4 * var(--u)) var(--red-idle);
 }
 
 .v2-board .band--right .edge-pill {
   right: 1cqw;
   background: linear-gradient(var(--green-idle), var(--green-idle));
-  box-shadow: 0 0 1.4cqh var(--green-idle);
+  box-shadow: 0 0 calc(1.4 * var(--u)) var(--green-idle);
 }
 
 /* Priority marker: persistent regardless of light state (priority is awarded
@@ -66,7 +82,7 @@
   display: none;
   font-weight: 800;
   line-height: 1;
-  -webkit-text-stroke: 0.4cqh rgba(0, 0, 0, 0.65);
+  -webkit-text-stroke: calc(0.4 * var(--u)) rgba(0, 0, 0, 0.65);
   paint-order: stroke fill;
 }
 
@@ -157,10 +173,11 @@
   position: relative;
   z-index: 3;
   width: 100%;
+  box-sizing: border-box;   /* padding inside the band, not 8cqw past its edge */
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 4cqh;
+  gap: calc(4 * var(--u));
   padding: 0 4cqw;
   color: var(--idle-ink);
   transition: color 0.28s ease;
@@ -171,9 +188,15 @@
 
 .v2-board .band--right .band-content { align-items: flex-end; text-align: right; }
 
+/* Keep text clear of each band's chevron (right end of the left band, left
+   end of the right band). Short names are unaffected; long ones shrink to fit
+   in front of it rather than running underneath. */
+.v2-board .band--left .band-content  { padding-right: 16cqw; }
+.v2-board .band--right .band-content { padding-left: 16cqw; }
+
 .v2-board .fencer-name {
   font-family: var(--font-narrow, "Arial Narrow", "Helvetica Neue", Arial, sans-serif);
-  font-size: 12cqh;
+  font-size: calc(12 * var(--u) * var(--fit, 1));
   line-height: 1;
   white-space: nowrap;
 }
@@ -196,15 +219,15 @@
 .v2-board .nation-code {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
-  font-size: 3.1cqh;
+  font-size: calc(3.1 * var(--u));
   font-weight: 700;
   letter-spacing: 0.12em;
   opacity: 0.85;
 }
 
 .v2-board .flag {
-  width: 18cqh;
-  height: 12cqh;
+  width: calc(18 * var(--u));
+  height: calc(12 * var(--u));
   border-radius: 3px;
   box-shadow: 0 0 0 1px var(--flag-ring);
   flex: none;
@@ -215,7 +238,7 @@
 .v2-board .score {
   font-family: "Consolas", "SF Mono", "DejaVu Sans Mono", monospace;
   font-variant-numeric: tabular-nums;
-  font-size: 22cqh;
+  font-size: calc(22 * var(--u));
   font-weight: 700;
   line-height: 1;
 }
@@ -228,8 +251,8 @@
 }
 
 .v2-board .card {
-  width: 5cqh;
-  height: 6.8cqh;
+  width: calc(5 * var(--u));
+  height: calc(6.8 * var(--u));
   border-radius: 2px;
   background: var(--card-idle);
   opacity: 0.25;
@@ -242,18 +265,18 @@
 .v2-board .card.yellow-card.active {
   background: var(--yellow-card);
   opacity: 1;
-  box-shadow: 0 0 1.2cqh rgba(255, 212, 0, 0.55);
+  box-shadow: 0 0 calc(1.2 * var(--u)) rgba(255, 212, 0, 0.55);
 }
 
 .v2-board .card.red-card.active {
   background: var(--red-card);
   opacity: 1;
-  box-shadow: 0 0 1.2cqh rgba(255, 45, 26, 0.55);
+  box-shadow: 0 0 calc(1.2 * var(--u)) rgba(255, 45, 26, 0.55);
 }
 
 .v2-board .card-letter {
   font-family: var(--font-narrow, "Arial Narrow", "Helvetica Neue", Arial, sans-serif);
-  font-size: 4cqh;
+  font-size: calc(4 * var(--u));
   font-weight: 800;
   line-height: 1;
   opacity: 0;
@@ -264,7 +287,7 @@
 .v2-board .card.p-card.level-1 {
   background: var(--yellow-card);
   opacity: 1;
-  box-shadow: 0 0 1.2cqh rgba(255, 212, 0, 0.55);
+  box-shadow: 0 0 calc(1.2 * var(--u)) rgba(255, 212, 0, 0.55);
 }
 
 .v2-board .card.p-card.level-1 .card-letter { color: rgba(20, 16, 0, 0.72); }
@@ -272,7 +295,7 @@
 .v2-board .card.p-card.level-2 {
   background: var(--red-card);
   opacity: 1;
-  box-shadow: 0 0 1.2cqh rgba(255, 45, 26, 0.55);
+  box-shadow: 0 0 calc(1.2 * var(--u)) rgba(255, 45, 26, 0.55);
 }
 
 .v2-board .card.p-card.level-2 .card-letter { color: #fff; }
@@ -287,7 +310,7 @@
   color: var(--idle-ink);
 }
 
-.v2-board .footer-col { display: flex; flex-direction: column; gap: 0.4cqh; }
+.v2-board .footer-col { display: flex; flex-direction: column; gap: calc(0.4 * var(--u)); }
 
 .v2-board .footer-col--piste { align-items: flex-start; }
 .v2-board .footer-col--state { align-items: center; padding: 0 2cqw; }
@@ -297,11 +320,11 @@
 .v2-board .cap-group {
   display: flex;
   align-items: center;
-  gap: 0.6cqh;
+  gap: calc(0.6 * var(--u));
 }
 
 .v2-board .cap {
-  font-size: 1.6cqh;
+  font-size: calc(1.6 * var(--u));
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--caption);
@@ -312,8 +335,8 @@
    broker (dark grey = disconnected, cyan = connected), so it sits next to
    the page-level "Piste" label rather than the device state badge. */
 .v2-board .broker-dot {
-  width: 1.1cqh;
-  height: 1.1cqh;
+  width: calc(1.1 * var(--u));
+  height: calc(1.1 * var(--u));
   border-radius: 50%;
   background: var(--dot-off);
   transition: background 0.3s ease, box-shadow 0.3s ease;
@@ -321,19 +344,19 @@
 
 .v2-board .broker-dot.online {
   background: var(--cyan-timer);
-  box-shadow: 0 0 0.8cqh rgba(63, 232, 255, 0.65);
+  box-shadow: 0 0 calc(0.8 * var(--u)) rgba(63, 232, 255, 0.65);
 }
 
 .v2-board .val {
   font-family: "Consolas", "SF Mono", monospace;
   font-variant-numeric: tabular-nums;
-  font-size: 6cqh;
+  font-size: calc(6 * var(--u));
   font-weight: 700;
   line-height: 1;
 }
 
 .v2-board .subline {
-  font-size: 1.7cqh;
+  font-size: calc(1.7 * var(--u));
   color: var(--caption);
   letter-spacing: 0.04em;
 }
@@ -344,14 +367,14 @@
 .v2-board .state-group {
   display: flex;
   align-items: center;
-  gap: 0.9cqh;
+  gap: calc(0.9 * var(--u));
 }
 
 .v2-board .state-badge {
-  font-size: 2.6cqh;
+  font-size: calc(2.6 * var(--u));
   font-weight: 800;
   line-height: 1;
-  padding: 0.6cqh 1.3cqh;
+  padding: calc(0.6 * var(--u)) calc(1.3 * var(--u));
   border-radius: 3px;
   background: var(--badge-bg);
   color: var(--badge-ink);
@@ -372,8 +395,8 @@
 
 /* Scoring device connection dot: dark grey = offline, green = online. */
 .v2-board .conn-dot {
-  width: 1.6cqh;
-  height: 1.6cqh;
+  width: calc(1.6 * var(--u));
+  height: calc(1.6 * var(--u));
   border-radius: 50%;
   background: var(--dot-off);
   transition: background 0.3s ease, box-shadow 0.3s ease;
@@ -381,7 +404,7 @@
 
 .v2-board .conn-dot.online {
   background: var(--green-idle);
-  box-shadow: 0 0 1cqh rgba(47, 224, 74, 0.65);
+  box-shadow: 0 0 calc(1 * var(--u)) rgba(47, 224, 74, 0.65);
 }
 
 @keyframes v2-pulse-state {
@@ -392,7 +415,7 @@
 .v2-board .uw2f {
   font-family: "Consolas", "SF Mono", monospace;
   font-variant-numeric: tabular-nums;
-  font-size: 4.6cqh;
+  font-size: calc(4.6 * var(--u));
   font-weight: 700;
   color: var(--uw2f-ok);
   opacity: 0;
@@ -406,7 +429,7 @@
 .v2-board .clock {
   font-family: "Consolas", "SF Mono", monospace;
   font-variant-numeric: tabular-nums;
-  font-size: 7.4cqh;
+  font-size: calc(7.4 * var(--u));
   font-weight: 700;
   color: var(--timer-ink);
   line-height: 1;

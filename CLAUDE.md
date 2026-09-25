@@ -86,3 +86,22 @@ There are two independent "online" concepts, both surfaced in the v2 layout foot
 This checkout regularly carries pending, unrelated changes (currently `install.sh`, `package-lock.json`, and a
 handful of untracked screenshot/SVG/script files from other in-progress work). When asked to commit, scope the
 commit to the files actually touched for the task at hand — don't sweep these in.
+
+## Message source, board sizing, portrait and fullscreen
+
+- **Where messages come from** is `public/js/source.js`: Paho MQTT to the page's own host by default (venue mode),
+  or server-sent events when the host page declares `<meta name="opp2-source" content="sse" data-url="…">`
+  (how openpiste-results shows this display without MQTT in the browser; it also sets `data-photos="off"`).
+  `main.js` only talks to the source object (`start`/`setPiste`, `onMessage`/`onLink`/`onConnected`), never to Paho.
+- **The board sizes itself in CSS**, not JS: `.scoring-container` is a size container (`pm-board`), the largest
+  16:9 box that fits a landscape window, 9:16 on a portrait window, the whole screen in fullscreen/embed.
+  Everything inside is sized in container units, **never `vmin`/`vh`/`vw`** (those follow the window, not the
+  board, which is what used to push content off-screen in fullscreen and made phones unusable): v1 uses
+  `cqmin`/`cqh`/`cqw`, v2 uses multiples of `--u` (`= 1cqh` on a 16:9 board, so the approved v2 design is unchanged).
+  The name bars bleed over exactly `--board-pad`, which fullscreen sets to 0.
+- **Portrait** is chosen by the board's own shape (`@container … (aspect-ratio < 1)`), so it applies windowed or
+  fullscreen. v1: `.v1-wrap` and `.side-cards` are layout-only wrappers (`display: contents` in landscape, so the
+  landscape layout is untouched) that become one grid. v2: the first name moves under the surname.
+- **Long names shrink to fit** (`fitNames()` in `main.js` sets `--fit`, which name font-sizes multiply by; floor
+  0.3). It re-runs on a name change, a score change (the v2 priority mark widens the name line), a theme change,
+  font load, and any board resize (ResizeObserver).

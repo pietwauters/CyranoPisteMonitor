@@ -423,6 +423,9 @@ function updateScore(message) {
   // both messages (whichever fires last wins, an existing v1 quirk).
   elements.v2.leftPriorityMark.classList.toggle('active', message.priority === OPP2.Priority.LEFT);
   elements.v2.rightPriorityMark.classList.toggle('active', message.priority === OPP2.Priority.RIGHT);
+
+  // A priority mark changes the width of the v2 name line.
+  fitNames();
 }
 
 function updateFencers(message) {
@@ -441,7 +444,62 @@ function updateFencers(message) {
   elements.v2.rightNation.textContent = (message.right.fencer.nation || '').toUpperCase();
   updateFlag(elements.v2.leftFlag, message.left.fencer.nation);
   updateFlag(elements.v2.rightFlag, message.right.fencer.nation);
+
+  fitNames();
 }
+
+// Long names shrink to fit their bar instead of being cut off. Each name's
+// font-size in CSS is multiplied by --fit (default 1); this sets --fit so the
+// text fits the space available, never below MIN_FIT. Runs after every name
+// change and whenever the board resizes (window, fullscreen, rotation, iframe).
+const MIN_FIT = 0.3;
+
+function horizontalPadding(el) {
+  const cs = getComputedStyle(el);
+  return parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+}
+
+// The rendered width of an element's text, however it's aligned. (scrollWidth
+// misses overflow on the start side of right-aligned text.)
+function textWidth(el) {
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  return range.getBoundingClientRect().width;
+}
+
+// available: width the text may use.
+function fitText(el, available) {
+  if (!el) return;
+  let fit = 1;
+  el.style.setProperty('--fit', '1');
+  // Text width isn't exactly proportional to font size (hinting, rounding),
+  // so re-measure after each step.
+  for (let i = 0; i < 3; i++) {
+    const needed = textWidth(el);
+    if (needed <= 0 || available <= 0 || needed <= available || fit <= MIN_FIT) return;
+    fit = Math.max(MIN_FIT, fit * (available / needed) * 0.97);
+    el.style.setProperty('--fit', String(fit));
+  }
+}
+
+function fitNames() {
+  // v1: each name bar has its own fixed width.
+  for (const el of [elements.leftName, elements.rightName]) {
+    if (el) fitText(el, el.clientWidth - horizontalPadding(el));
+  }
+  // v2: the name line sits in the band's content column.
+  document.querySelectorAll('.v2-board .fencer-name').forEach((el) => {
+    fitText(el, el.parentElement.clientWidth - horizontalPadding(el.parentElement));
+  });
+}
+
+if (window.ResizeObserver) {
+  const board = document.querySelector('.scoring-container');
+  if (board) new ResizeObserver(() => fitNames()).observe(board);
+}
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitNames);
+// A theme switch changes the font, and with it every name's width.
+if (window.Prefs && Prefs.subscribe) Prefs.subscribe(() => requestAnimationFrame(fitNames));
 
 function updateMatch(message) {
   // Round/Period
@@ -674,23 +732,14 @@ function applyPisteFrame() {
 
 document.addEventListener('fullscreenchange', applyPisteFrame);
 
+// Board sizing is pure CSS (style.css: aspect-ratio + container units, with
+// a portrait shape on portrait screens). This only clears inline sizes an
+// older version of this function set, so the CSS always wins.
 function handleResize() {
-  if (document.body.classList.contains('embed-mode')) return;
   const container = document.querySelector('.scoring-container');
-  if (document.fullscreenElement) {
-    container.style.width = '100vw';
-    container.style.height = '100vh';
-  } else {
-    const aspectRatio = 16 / 9;
-    const windowRatio = window.innerWidth / window.innerHeight;
-    if (windowRatio > aspectRatio) {
-      container.style.width = `${90 * aspectRatio * (window.innerHeight / window.innerWidth)}vw`;
-      container.style.height = '90vh';
-    } else {
-      container.style.width = '90vw';
-      container.style.height = `${90 / aspectRatio * (window.innerWidth / window.innerHeight)}vh`;
-    }
-  }
+  if (!container) return;
+  container.style.width = '';
+  container.style.height = '';
 }
 
 function updateFlag(flagElement, nocCode) {

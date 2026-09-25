@@ -1,8 +1,10 @@
 /* Extracted from index.html <style> */
 :root {
-    --frame-thickness: 0.8vmin;
-    --card-height: 4.5vmin;
-    --name-inner-padding: 4vmin;
+    --frame-thickness: 0.8cqmin;
+    --card-height: 4.5cqmin;
+    --name-inner-padding: 4cqmin;
+    /* The board's inner padding; the name bars bleed out over exactly this. */
+    --board-pad: 2vmin;
 }
 
 :fullscreen {
@@ -12,6 +14,8 @@
 :fullscreen .scoring-container {
     width: 100vw !important;
     height: 100vh !important;
+    aspect-ratio: unset !important;
+    --board-pad: 0px;
     min-width: unset !important;
     min-height: unset !important;
     max-width: unset !important;
@@ -48,24 +52,44 @@ body {
     align-items: center;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
 }
 
+/* The board is the largest box of its aspect ratio that fits the window:
+   16:9 on a landscape screen, 9:16 on a portrait one (phones held upright),
+   and the whole screen in fullscreen/embed mode. Everything inside is sized in
+   container units (cqmin/cqw/cqh) relative to this box, never to the window,
+   so the full content always fits whatever its size or shape. The board's own
+   shape then picks the arrangement: see the portrait @container rules below. */
 .scoring-container {
+    container-type: size;
+    container-name: pm-board;
     background: var(--board-bg);
     border-radius: 1.5vmin;
     position: relative;
-    width: 90vw;
-    height: 90vh;
-    min-width: 800px;
-    min-height: 400px;
+    width: min(90vw, calc(90vh * 16 / 9));
+    width: min(90vw, calc(90dvh * 16 / 9));
     max-width: 2000px;
-    max-height: 1000px;
-    padding: 2vmin;
-    box-sizing: border-box;
     aspect-ratio: 16/9;
+    padding: var(--board-pad);
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
+}
+
+@media (orientation: portrait) {
+    .scoring-container {
+        width: min(94vw, calc(94vh * 9 / 16));
+        width: min(94vw, calc(94dvh * 9 / 16));
+        aspect-ratio: 9/16;
+    }
+}
+
+/* Landscape: the layout-only wrappers don't exist as boxes. */
+.v1-wrap,
+.side-cards {
+    display: contents;
 }
 
 /* Alternative "v2" layout toggle (?layout=v2): swap which board renders
@@ -99,15 +123,15 @@ body.embed-mode .scoring-container {
 
 h3 {
     color: var(--text);
-    margin: 0 0 1vh;
-    font-size: 3vmin;
+    margin: 0 0 1cqh;
+    font-size: 3cqmin;
     text-align: center;
 }
 
 h4.poolNum {
     color: var(--accent);
-    margin: 0 0 2vh;
-    font-size: 2.5vmin;
+    margin: 0 0 2cqh;
+    font-size: 2.5cqmin;
     text-align: center;
 }
 
@@ -121,17 +145,17 @@ h4.poolNum {
 .name-container {
     display: flex;
     justify-content: space-between;
-    height: 10vh;
-    margin: 0 0 1vh 0;
-    width: calc(100% + 4vmin);
-    margin-left: -2vmin;
+    height: 10cqh;
+    margin: 0 0 1cqh 0;
+    width: calc(100% + 2 * var(--board-pad));
+    margin-left: calc(-1 * var(--board-pad));
 }
 
 .top-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1vmin;
+    gap: 1cqmin;
     width: 100%;
 }
 
@@ -147,7 +171,7 @@ h4.poolNum {
 .top-row .left-lights,
 .top-row .right-lights {
     display: flex;
-    gap: 1vmin;
+    gap: 1cqmin;
     align-items: center;
     flex: 1 1 auto;
 }
@@ -162,14 +186,14 @@ h4.poolNum {
 
 .top-row h4.poolNum {
     flex: 0 0 auto;
-    margin: 0 1vmin;
+    margin: 0 1cqmin;
     white-space: nowrap;
     text-align: center;
 }
 
 .smName {
     color: var(--side-ink);
-    font-size: 8vmin;
+    font-size: calc(8cqmin * var(--fit, 1));
     width: 50%;
     box-sizing: border-box;
     height: 100%;
@@ -203,12 +227,12 @@ h4.poolNum {
     display: flex;
     justify-content: space-between;
     padding: 0;
-    margin: 1vmin 0;
-    height: 10vmin;
+    margin: 1cqmin 0;
+    height: 10cqmin;
 }
 
 .national-flag {
-    height: 10vmin;
+    height: 10cqmin;
     width: auto;
     aspect-ratio: 3/2;
     object-fit: contain;
@@ -218,19 +242,19 @@ h4.poolNum {
 .fencer-photos {
     display: flex;
     justify-content: center;
-    gap: 55vmin;
+    gap: 55cqmin;
     padding: 0;
-    margin: 3vmin 0;
-    height: 35vmin;
+    margin: 3cqmin 0;
+    height: 35cqmin;
 }
 
 .fencer-photo {
-    width: 28vmin;
-    height: 35vmin;
-    border-radius: 1vmin;
+    width: 28cqmin;
+    height: 35cqmin;
+    border-radius: 1cqmin;
     overflow: hidden;
     background: var(--photo-bg);
-    border: 0.3vmin solid var(--photo-border);
+    border: 0.3cqmin solid var(--photo-border);
     display: none;
 }
 
@@ -247,13 +271,13 @@ h4.poolNum {
 .light-container {
     display: flex;
     justify-content: space-between;
-    margin: 1vh 0;
+    margin: 1cqh 0;
     padding: 0 1px;
 }
 
 .smLamp {
-    width: 24vmin;
-    height: 6vmin;
+    width: 24cqmin;
+    height: 6cqmin;
     transition: all 0.3s ease;
 }
 
@@ -267,20 +291,20 @@ h4.poolNum {
 
 .smClock {
     color: var(--text);
-    font-size: 15vmin;
+    font-size: 15cqmin;
     margin: 5;
     text-shadow: var(--clock-glow);
 }
 
 .smPeriod {
     color: var(--text);
-    font-size: 6vmin;
-    margin-top: 1vh;
+    font-size: 6cqmin;
+    margin-top: 1cqh;
 }
 
 .card-container {
     position: absolute;
-    bottom: calc(4vh + var(--card-height));
+    bottom: calc(4cqh + var(--card-height));
     width: 100%;
     display: flex;
     justify-content: center;
@@ -288,9 +312,9 @@ h4.poolNum {
 }
 
 .smCard {
-    width: 6vmin;
+    width: 6cqmin;
     height: var(--card-height);
-    border-radius: 0.5vmin;
+    border-radius: 0.5cqmin;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -300,32 +324,32 @@ h4.poolNum {
 }
 
 .lYellow {
-    right: calc(50% + 12vmin);
+    right: calc(50% + 12cqmin);
 }
 
 .lRed {
-    right: calc(50% + 21vmin);
+    right: calc(50% + 21cqmin);
 }
 
 .rYellow {
-    left: calc(50% + 12vmin);
+    left: calc(50% + 12cqmin);
 }
 
 .rRed {
-    left: calc(50% + 21vmin);
+    left: calc(50% + 21cqmin);
 }
 
 .lPCard {
-    right: calc(50% + 30vmin);
+    right: calc(50% + 30cqmin);
 }
 
 .rPCard {
-    left: calc(50% + 30vmin);
+    left: calc(50% + 30cqmin);
 }
 
 .smPCard {
     font-weight: bold;
-    font-size: 3vmin;
+    font-size: 3cqmin;
     color: var(--card-ink);
     display: flex;
     align-items: center;
@@ -334,7 +358,7 @@ h4.poolNum {
 
 .score-container {
     position: absolute;
-    bottom: 2vh;
+    bottom: 2cqh;
     width: 100%;
     display: flex;
     justify-content: space-between;
@@ -344,18 +368,18 @@ h4.poolNum {
 
 .smScore {
     color: var(--text);
-    font-size: 18vmin;
-    min-width: 25vmin;
+    font-size: 18cqmin;
+    min-width: 25cqmin;
 }
 
 .lScore {
     text-align: left;
-    padding-left: 4vmin;
+    padding-left: 4cqmin;
 }
 
 .rScore {
     text-align: right;
-    padding-right: 6vmin;
+    padding-right: 6cqmin;
 }
 
 .left-priority,
@@ -363,17 +387,17 @@ h4.poolNum {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    font-size: 5vmin;
+    font-size: 5cqmin;
     display: none;
 }
 
 .left-priority {
-    right: calc(100% + 1.5vmin);
+    right: calc(100% + 1.5cqmin);
     color: var(--priority-left);
 }
 
 .right-priority {
-    left: calc(100% + 1.5vmin);
+    left: calc(100% + 1.5cqmin);
     color: var(--priority-right);
 }
 
@@ -417,8 +441,8 @@ h4.poolNum {
 }
 
 .uw2f-timer {
-    font-size: 8vmin;
-    margin-top: 3vh;
+    font-size: 8cqmin;
+    margin-top: 3cqh;
     line-height: 1;
 }
 
@@ -432,11 +456,11 @@ h4.poolNum {
 
 .apparatus-state {
     position: absolute;
-    bottom: 2vh;
+    bottom: 2cqh;
     left: 50%;
     transform: translateX(-50%);
     color: var(--text);
-    font-size: 2.5vmin;
+    font-size: 2.5cqmin;
     font-weight: bold;
     text-align: center;
 }
@@ -480,4 +504,126 @@ h4.poolNum {
 
 .scoring-container.frame-gold::after {
     box-shadow: inset 0 0 0 var(--frame-thickness) var(--frame-gold);
+}
+
+/* ── Portrait arrangement (v1) ─────────────────────────────────────────────
+   Applies whenever the board itself is taller than wide: a phone held
+   upright, windowed or fullscreen. The landscape wrappers dissolve
+   (display: contents) and every piece is placed on one grid, left fencer
+   (red) on top, right fencer (green) at the bottom, clock in the middle. */
+@container pm-board (aspect-ratio < 1) {
+    body:not(.layout-v2) .v1-wrap {
+        display: grid;
+        flex: 1 1 auto;
+        min-height: 0;
+        grid-template-columns: 1fr auto;
+        grid-template-rows: auto 1fr auto auto 1.2fr auto auto 1fr auto auto;
+        grid-template-areas:
+            "lname  lname"
+            "lflag  lscore"
+            "lcards lscore"
+            "llamps llamps"
+            "clock  clock"
+            "rlamps rlamps"
+            "rcards rscore"
+            "rflag  rscore"
+            "rname  rname"
+            "strip  state";
+        row-gap: 0.8cqh;
+        padding: 0 2cqw;    /* keep content off the screen edge in fullscreen */
+    }
+
+    .v1-wrap .name-container,
+    .v1-wrap .top-row,
+    .v1-wrap .scoringMachine,
+    .v1-wrap .scoring-inner,
+    .v1-wrap .flag-container,
+    .v1-wrap .card-container,
+    .v1-wrap .score-container {
+        display: contents;
+    }
+
+    .v1-wrap .fencer-photos { display: none; }
+
+    .v1-wrap .smName {
+        margin: 0 -2cqw;    /* ...while the name bars still run edge to edge */
+        width: auto;
+        height: auto;
+        font-size: calc(min(7cqw, 3.6cqh) * var(--fit, 1));
+        padding: 1cqh 4cqw;
+    }
+    .v1-wrap .lName { grid-area: lname; }
+    .v1-wrap .rName { grid-area: rname; justify-content: flex-start; }
+
+    .v1-wrap .left-flag  { grid-area: lflag; }
+    .v1-wrap .right-flag { grid-area: rflag; }
+    .v1-wrap .national-flag { height: min(11cqw, 5.5cqh); align-self: end; }
+    .v1-wrap .right-flag { align-self: start; }
+
+    .v1-wrap .side-cards {
+        display: flex;
+        gap: 2cqw;
+        align-items: center;
+    }
+    .v1-wrap .left-cards  { grid-area: lcards; align-self: start; }
+    .v1-wrap .right-cards { grid-area: rcards; align-self: end; flex-direction: row-reverse; justify-content: flex-end; }
+    .v1-wrap .smCard {
+        position: static;
+        width: min(8cqw, 4.2cqh);
+        height: min(11cqw, 5.6cqh);
+        font-size: min(5cqw, 2.6cqh);
+    }
+
+    .v1-wrap .smScore {
+        font-size: min(29cqw, 14cqh);
+        line-height: 1;
+        min-width: 0;
+        padding: 0 2cqw 0 0;
+        text-align: right;
+        align-self: center;
+    }
+    .v1-wrap .lScore { grid-area: lscore; }
+    .v1-wrap .rScore { grid-area: rscore; }
+
+    .v1-wrap .left-lights  { grid-area: llamps; }
+    .v1-wrap .right-lights { grid-area: rlamps; }
+    .v1-wrap .left-lights,
+    .v1-wrap .right-lights {
+        display: flex;
+        gap: 2cqw;
+    }
+    .v1-wrap .smLamp {
+        flex: 1 1 0;
+        width: auto;
+        height: 4.5cqh;
+    }
+
+    .v1-wrap .timer-container {
+        grid-area: clock;
+        position: relative;
+        top: auto;
+        left: auto;
+        transform: none;
+        align-self: center;
+    }
+    .v1-wrap .smClock  { font-size: min(21cqw, 10cqh); line-height: 1.1; }
+    .v1-wrap .smPeriod { font-size: min(7cqw, 3.5cqh); margin-top: 0; }
+    .v1-wrap .uw2f-timer { font-size: min(10cqw, 5cqh); margin-top: 0.5cqh; }
+    .v1-wrap .left-priority  { right: auto; left: 2cqw; font-size: min(9cqw, 4.5cqh); }
+    .v1-wrap .right-priority { left: auto; right: 2cqw; font-size: min(9cqw, 4.5cqh); }
+
+    .v1-wrap h4.poolNum {
+        grid-area: strip;
+        font-size: min(4.5cqw, 2.3cqh);
+        margin: 0;
+        text-align: left;
+        align-self: center;
+    }
+    .v1-wrap .apparatus-state {
+        grid-area: state;
+        position: static;
+        transform: none;
+        font-size: min(5cqw, 2.5cqh);
+        align-self: center;
+    }
 }
