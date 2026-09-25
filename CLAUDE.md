@@ -91,7 +91,9 @@ commit to the files actually touched for the task at hand — don't sweep these 
 
 - **Where messages come from** is `public/js/source.js`: Paho MQTT to the page's own host by default (venue mode),
   or server-sent events when the host page declares `<meta name="opp2-source" content="sse" data-url="…">`
-  (how openpiste-results shows this display without MQTT in the browser; it also sets `data-photos="off"`).
+  (how openpiste-results shows this display without MQTT in the browser; it also sets `data-photos="off"`),
+  or, for a display embedded in a page showing several pistes, `content="parent"`: the parent page feeds it over
+  `postMessage` from its own single connection (`opp2-hello` in, `opp2`/`opp2-link` out, same origin only).
   `main.js` only talks to the source object (`start`/`setPiste`, `onMessage`/`onLink`/`onConnected`), never to Paho.
 - **The board sizes itself in CSS**, not JS: `.scoring-container` is a size container (`pm-board`), the largest
   16:9 box that fits a landscape window, 9:16 on a portrait window, the whole screen in fullscreen/embed.

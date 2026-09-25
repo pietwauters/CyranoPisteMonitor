@@ -11,8 +11,15 @@
 // dispatcher and every handler in main.js work unchanged. This is how
 // openpiste-results shows this display without any MQTT in the browser.
 //
+// A page that embeds several displays (one iframe per piste) can instead feed
+// them itself over a single connection, declaring content="parent": the
+// display then posts {type:'opp2-hello', piste} to its parent window and
+// takes {type:'opp2', topic, payload} messages back (same origin only). The
+// parent replays the piste's current state on every hello. Opened on its own
+// (no parent window), such a page falls back to its data-url stream.
+//
 // Every source exposes the same shape:
-//   kind         'mqtt' | 'sse'
+//   kind         'mqtt' | 'sse' | 'parent'
 //   photos       whether fencer photos are served next to this page
 //   onMessage    (topic, payloadString) => void    set by main.js
 //   onLink       (online) => void                  page's own link to its source
@@ -111,11 +118,38 @@
     return src;
   }
 
+  function parentSource(photos) {
+    const src = base('parent', photos);
+    const hello = () => window.parent.postMessage({ type: 'opp2-hello', piste: src.piste }, location.origin);
+
+    window.addEventListener('message', (e) => {
+      if (e.source !== window.parent || e.origin !== location.origin) return;
+      const m = e.data;
+      if (!m || typeof m !== 'object') return;
+      if (m.type === 'opp2' && typeof m.topic === 'string' && src.onMessage) {
+        src.onMessage(m.topic, JSON.stringify(m.payload));
+      } else if (m.type === 'opp2-link') {
+        src.link(!!m.online);
+      }
+    });
+
+    src.start = (piste) => {
+      src.piste = piste;
+      src.link(true);
+      if (src.onConnected) src.onConnected();
+      hello();
+    };
+    src.setPiste = (piste) => { src.piste = piste; hello(); };
+    return src;
+  }
+
   window.OPP2Source = {
     fromPage() {
       const meta = document.querySelector('meta[name="opp2-source"]');
-      if (meta && meta.content === 'sse' && meta.dataset.url) {
-        return sseSource(meta.dataset.url, meta.dataset.photos !== 'off');
+      const photos = !meta || meta.dataset.photos !== 'off';
+      if (meta && meta.content === 'parent' && window.parent !== window) return parentSource(photos);
+      if (meta && (meta.content === 'sse' || meta.content === 'parent') && meta.dataset.url) {
+        return sseSource(meta.dataset.url, photos);
       }
       return mqttSource();
     },
