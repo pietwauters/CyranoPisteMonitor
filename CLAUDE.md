@@ -107,3 +107,8 @@ commit to the files actually touched for the task at hand — don't sweep these 
 - **Long names shrink to fit** (`fitNames()` in `main.js` sets `--fit`, which name font-sizes multiply by; floor
   0.3). It re-runs on a name change, a score change (the v2 priority mark widens the name line), a theme change,
   font load, and any board resize (ResizeObserver).
+- **Open (2026-09-25):** the portrait arrangement above works (everything fits) but was judged confusing in real
+  use; a different full-screen portrait layout is wanted, design not yet discussed. Separately, **iPhone Safari has
+  no Fullscreen API for pages**, so the Fullscreen button does nothing there (portrait hides this because the
+  board is phone-shaped; landscape shows it), and in phone landscape the button shrinks to ~62x21 px. Options are
+  written up in openpiste-results `docs/design.md` §10.
