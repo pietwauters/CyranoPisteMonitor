@@ -17,8 +17,11 @@
   var box = document.createElement('div');
   box.className = 'prefs-ui';
 
+  // A value the host page pinned can't be changed here, so it gets no control.
+  var pinned = function (key) { return Prefs.isPinned && Prefs.isPinned(key); };
+
   var themeSelect = null;
-  if (Prefs.THEMES.length > 1) {
+  if (Prefs.THEMES.length > 1 && !pinned('theme')) {
     themeSelect = document.createElement('select');
     Prefs.THEMES.forEach(function (name) {
       var opt = document.createElement('option');
@@ -38,7 +41,7 @@
     langSelect.appendChild(opt);
   });
   langSelect.addEventListener('change', function () { Prefs.set('lang', langSelect.value); });
-  box.appendChild(langSelect);
+  if (!pinned('lang')) box.appendChild(langSelect);
 
   var modeBtn = document.createElement('button');
   modeBtn.type = 'button';
@@ -46,7 +49,7 @@
     var modes = Prefs.MODES;
     Prefs.set('mode', modes[(modes.indexOf(Prefs.get().mode) + 1) % modes.length]);
   });
-  box.appendChild(modeBtn);
+  if (!pinned('mode')) box.appendChild(modeBtn);
 
   function render(p) {
     var mode = t('prefs.mode.' + p.mode);

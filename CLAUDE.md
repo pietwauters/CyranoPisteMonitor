@@ -104,6 +104,9 @@ commit to the files actually touched for the task at hand — don't sweep these 
 - **Portrait** is chosen by the board's own shape (`@container … (aspect-ratio < 1)`), so it applies windowed or
   fullscreen. v1: `.v1-wrap` and `.side-cards` are layout-only wrappers (`display: contents` in landscape, so the
   landscape layout is untouched) that become one grid. v2: the first name moves under the surname.
+- **Pinning a preference:** a host page can add `<meta name="prefs-pin" content="mode=dark">` before `prefs.js`;
+  the pinned value wins over everything (parent page included), is never saved, and `prefs-ui.js` shows no control
+  for it. openpiste-results pins `mode=dark` so scoreboards stay dark while its own pages are in day mode.
 - **Long names shrink to fit** (`fitNames()` in `main.js` sets `--fit`, which name font-sizes multiply by; floor
   0.3). It re-runs on a name change, a score change (the v2 priority mark widens the name line), a theme change,
   font load, and any board resize (ResizeObserver).

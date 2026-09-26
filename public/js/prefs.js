@@ -9,6 +9,12 @@
    pinned with a URL without touching what a person chose on their own
    device.
 
+   A host page can pin a value instead, with a meta tag in <head> before this
+   script: <meta name="prefs-pin" content="mode=dark"> (query-string syntax,
+   several keys allowed). A pinned value wins over everything above, including
+   the parent page's, and is never saved: openpiste-results uses it to keep
+   scoreboards dark while its own pages are in day mode.
+
    Embedded boards (overview iframes, ?embed=1) follow their parent page:
    the parent pushes its effective prefs by postMessage, which also keeps
    them in sync when the visitor uses the selector on the overview. */
@@ -63,10 +69,18 @@
   var fromUrl = pick({ theme: params.get('theme'), mode: params.get('mode'), lang: params.get('lang') });
   var stored = readStored();
   var fromParent = {};
-  var chosen = {};   // picked on this page; wins over everything
+  var chosen = {};   // picked on this page; wins over everything but a pin
+
+  function readPinned() {
+    var meta = document.querySelector('meta[name="prefs-pin"]');
+    if (!meta) return {};
+    var q = new URLSearchParams(meta.getAttribute('content') || '');
+    return pick({ theme: q.get('theme'), mode: q.get('mode'), lang: q.get('lang') });
+  }
+  var pinned = readPinned();
 
   function current() {
-    return Object.assign({}, DEFAULTS, stored, fromUrl, fromParent, chosen);
+    return Object.assign({}, DEFAULTS, stored, fromUrl, fromParent, chosen, pinned);
   }
 
   function resolveMode(mode) {
@@ -132,6 +146,9 @@
     LANGS: LANGS,
     get: current,
     set: set,
+    // True when the host page pinned this value (see top of file): a selector
+    // for it would have no effect, so prefs-ui.js leaves it out.
+    isPinned: function (key) { return Object.prototype.hasOwnProperty.call(pinned, key); },
     subscribe: function (fn) { listeners.push(fn); fn(current()); },
     // Query-string tail carrying only URL-supplied values, for links and
     // iframes that should inherit a pinned look ("&theme=fie&mode=light").
